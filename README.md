@@ -2,7 +2,7 @@
 
 **Private playtest sandbox** — a classless Lifepath + personal-Web character builder for the **Aegis** science-fiction setting, layered on a D&D 5.5e/3.5e-style d20 core.
 
-**▶ Play it:** `https://YOURUSERNAME.github.io/buildwright/` *(replace YOURUSERNAME after enabling GitHub Pages)*
+**▶ Play it:** `https://hunsperger1994-del.github.io/buildwright/` *(replace YOURUSERNAME after enabling GitHub Pages)*
 
 ## What it is
 
