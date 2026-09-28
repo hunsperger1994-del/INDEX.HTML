@@ -1,0 +1,2199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060a13">
+<title>Buildwright v0.1</title>
+<!-- BUILDWRIGHT v0.1 — Private Offline Playtest Sandbox.
+     One self-contained file: no network, no libraries, no fonts, no telemetry.
+     Source sections (search for the banners): CONFIGURATION, DATA DEFINITIONS,
+     CHARACTER MODEL, LIFEPATH ENGINE, SKILL ENGINE, PREREQUISITE ENGINE, WEB ENGINE,
+     NODE PURCHASING, EVENT ENGINE, PLANNING MODE, STORAGE, UI, DEBUGGING, BALANCE STATISTICS. -->
+<style>
+:root{
+  --bg:#060a13; --bg2:#0b1222; --panel:#0f1729; --panel2:#141e34; --line:#223050; --line2:#2d3f66;
+  --text:#dfe8f6; --dim:#8b9bb8; --faint:#5a6a88; --accent:#3fd0ff; --accent2:#8ae8ff;
+  --good:#4cf0a0; --bad:#ff5f6d; --warn:#ffb547; --plan:#ffb547; --dev:#ff5f6d;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.45 var(--sans);-webkit-text-size-adjust:100%}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+  background:radial-gradient(1200px 700px at 50% 10%, #0d1a33 0%, var(--bg) 60%)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+.mono{font-family:var(--mono)}
+.dim{color:var(--dim)} .faint{color:var(--faint)} .good{color:var(--good)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.small{font-size:12.5px} .tiny{font-size:11px}
+h1,h2,h3{margin:0 0 8px;font-weight:650;letter-spacing:.02em}
+h2{font-size:17px} h3{font-size:14px;color:var(--accent2);text-transform:uppercase;letter-spacing:.12em}
+
+/* ---- top bar ---- */
+#topbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));
+  background:rgba(8,13,26,.92);border-bottom:1px solid var(--line);min-height:52px}
+#topbar .brand{font-family:var(--mono);font-weight:700;letter-spacing:.18em;font-size:13px;color:var(--accent)}
+#topbar .who{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font:600 11px/1.2 var(--mono);letter-spacing:.06em;border:1px solid var(--line2);white-space:nowrap}
+.badge.live{color:var(--good);border-color:rgba(76,240,160,.45);background:rgba(76,240,160,.08)}
+.badge.plan{color:#1a1000;background:var(--plan);border-color:var(--plan)}
+.badge.wp{color:var(--accent2)} .badge.neg{color:var(--bad);border-color:var(--bad)}
+.iconbtn{min-width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:inline-flex;align-items:center;justify-content:center;font-size:18px}
+
+#banner{flex:0 0 auto}
+.planbar{background:repeating-linear-gradient(135deg,#3a2600 0 12px,#2c1d00 12px 24px);border-bottom:2px solid var(--plan);
+  color:var(--plan);padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-weight:600;font-size:13px}
+.planbar .grow{flex:1;min-width:180px}
+
+#view{flex:1 1 auto;overflow:auto;-webkit-overflow-scrolling:touch;position:relative}
+#view.webmode{overflow:hidden}
+.page{padding:12px 12px 90px;max-width:900px;margin:0 auto}
+
+/* ---- tabs ---- */
+#tabs{flex:0 0 auto;display:flex;background:rgba(8,13,26,.96);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#tabs button{flex:1;border:0;background:none;padding:8px 2px 9px;color:var(--dim);font-size:11px;letter-spacing:.06em;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:54px}
+#tabs button .i{font-size:19px;line-height:1}
+#tabs button.on{color:var(--accent);box-shadow:inset 0 2px 0 var(--accent)}
+#tabs button.dev.on{color:var(--dev);box-shadow:inset 0 2px 0 var(--dev)}
+
+/* ---- generic ---- */
+.card{background:linear-gradient(180deg,var(--panel),#0c1424);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin:0 0 12px}
+.card.dev{border-color:rgba(255,95,109,.45)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.nowrap{flex-wrap:nowrap}
+.grow{flex:1}
+.btn{min-height:42px;padding:8px 14px;border-radius:10px;border:1px solid var(--line2);background:var(--panel2);font-weight:600;font-size:14px}
+.btn.primary{background:linear-gradient(180deg,#1ea7d6,#127aa3);border-color:#40c9f5;color:#fff}
+.btn.good{background:#0f3b2a;border-color:var(--good);color:var(--good)}
+.btn.danger{background:#3a1117;border-color:var(--bad);color:#ffb3ba}
+.btn.warn{background:#3a2a0c;border-color:var(--warn);color:var(--warn)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:34px;padding:5px 10px;font-size:13px}
+.btn:disabled,.btn.off{opacity:.45}
+.btn.block{width:100%}
+input[type=text],input[type=number],input[type=search],select,textarea{background:#08101f;border:1px solid var(--line2);border-radius:8px;padding:9px 10px;min-height:42px;width:100%}
+textarea{font:12px/1.4 var(--mono);min-height:160px}
+input[type=number]{width:90px}
+label.field{display:block;margin:0 0 10px} label.field span{display:block;font-size:12px;color:var(--dim);margin-bottom:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:#0a1324;border:1px solid var(--line2);font-size:12px;margin:2px 3px 2px 0}
+.chip.x{padding-right:3px} .chip.x button{border:0;background:#1b2743;border-radius:999px;width:24px;height:24px;color:var(--dim)}
+.chip.sup{opacity:.5;text-decoration:line-through}
+.chip.test{border-color:rgba(255,181,71,.5);color:var(--warn)}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.kv > div{background:#0a1324;border:1px solid var(--line);border-radius:8px;padding:8px}
+.kv .k{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.kv .v{font:700 20px/1.2 var(--mono)}
+.attrs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(min-width:620px){.attrs{grid-template-columns:repeat(6,1fr)}}
+.attr{background:#0a1324;border:1px solid var(--line);border-radius:8px;padding:8px 4px;text-align:center}
+.attr .n{font:600 11px var(--mono);color:var(--dim);letter-spacing:.1em}
+.attr .s{font:700 22px/1.1 var(--mono)} .attr .m{font:12px var(--mono);color:var(--accent2)}
+.attr .delta{font-size:11px}
+.list > *{border-top:1px solid var(--line);padding:10px 0} .list > *:first-child{border-top:0}
+.muted-box{background:#0a1324;border:1px dashed var(--line2);border-radius:8px;padding:10px}
+.warnbox{background:rgba(255,181,71,.08);border:1px solid rgba(255,181,71,.5);border-radius:10px;padding:12px;color:#ffe2b0}
+.dangerbox{background:rgba(255,95,109,.08);border:1px solid rgba(255,95,109,.55);border-radius:10px;padding:12px}
+details > summary{cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:600;color:var(--accent2)}
+.explain .ln{font-size:13px;padding:2px 0;display:flex;gap:6px}
+.explain .ln .m{flex:0 0 16px;font-weight:700}
+.explain .ok .m{color:var(--good)} .explain .no .m{color:var(--bad)} .explain .grp{color:var(--dim)}
+.explain h4{margin:10px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+table.t{width:100%;border-collapse:collapse;font-size:13px} table.t td,table.t th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}
+table.t th{color:var(--dim);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.bar{height:8px;background:#0a1324;border-radius:4px;overflow:hidden} .bar > i{display:block;height:100%}
+
+/* ---- lifepath ---- */
+.stepper{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
+.stepper button{flex:0 0 auto;border:1px solid var(--line2);background:#0a1324;border-radius:999px;padding:7px 12px;font-size:12.5px;color:var(--dim);min-height:36px}
+.stepper button.on{border-color:var(--accent);color:var(--accent);background:#0b2233}
+.stepper button.done::before{content:"✓ ";color:var(--good)}
+.opt{display:block;width:100%;text-align:left;background:linear-gradient(180deg,var(--panel),#0c1424);border:1px solid var(--line);border-radius:12px;padding:12px;margin:0 0 10px}
+.opt.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 22px rgba(63,208,255,.18)}
+.opt.na{opacity:.55;border-style:dashed}
+.opt .t{font-weight:700;font-size:15.5px} .opt .d{color:var(--dim);font-size:13px;margin:2px 0 6px}
+.fx{display:flex;flex-wrap:wrap;gap:4px}
+.fx span{font:12px var(--mono);padding:2px 7px;border-radius:6px;background:#0a1a2c;border:1px solid var(--line)}
+.fx .a{color:#ffd28a} .fx .s{color:var(--accent2)} .fx .g{color:#c7b3ff} .fx .e{color:#ff9fcf} .fx .q{color:#a6e35a}
+.lpnav{position:sticky;bottom:0;display:flex;gap:8px;padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(6,10,19,.95);border-top:1px solid var(--line)}
+.lpnav .btn{flex:1}
+
+/* ---- web ---- */
+#webwrap{position:absolute;inset:0;touch-action:none;overflow:hidden}
+#webwrap svg{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.webctl{position:absolute;right:10px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:3}
+.webctl button{width:46px;height:46px;border-radius:12px;border:1px solid var(--line2);background:rgba(15,23,41,.9);font-size:20px;font-weight:700}
+.webtop{position:absolute;left:8px;right:8px;top:8px;display:flex;gap:6px;z-index:3;flex-wrap:wrap}
+.webtop input{flex:1;min-width:120px;background:rgba(8,16,31,.9)} .webtop select{width:auto;flex:0 0 auto;background:rgba(8,16,31,.9)}
+.legend{position:absolute;left:8px;bottom:12px;z-index:3;background:rgba(8,13,26,.9);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11.5px;max-width:230px}
+.legend div{display:flex;align-items:center;gap:6px;margin:2px 0}
+.legend svg{width:18px;height:18px;flex:0 0 18px}
+@keyframes pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:.35}}
+.n-available .ring{animation:pulse 1.6s ease-in-out infinite}
+.lowzoom .lbl.sec{display:none}
+.minimap{position:relative;height:340px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#050910}
+
+/* ---- sheet / modal / toast ---- */
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:78dvh;background:#0c1426;border-top:1px solid var(--line2);border-radius:16px 16px 0 0;
+  box-shadow:0 -12px 40px rgba(0,0,0,.6);transform:translateY(105%);transition:transform .22s ease;z-index:20;display:flex;flex-direction:column}
+#sheet.open{transform:none}
+#sheet .grab{flex:0 0 auto;padding:8px 12px 6px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+#sheet .grab::before{content:"";position:absolute;left:50%;top:5px;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line2)}
+#sheet .body{overflow:auto;padding:12px 12px max(18px,env(safe-area-inset-bottom))}
+@media(min-width:900px){#sheet{left:auto;right:12px;bottom:12px;width:420px;border-radius:16px;max-height:calc(100dvh - 90px);border:1px solid var(--line2)}}
+#modal{position:fixed;inset:0;background:rgba(2,5,10,.72);z-index:40;display:none;align-items:flex-end;justify-content:center}
+#modal.open{display:flex}
+#modal .box{background:#0e1628;border:1px solid var(--line2);border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:90dvh;overflow:auto;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+@media(min-width:700px){#modal{align-items:center} #modal .box{border-radius:16px}}
+#toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translateX(-50%) translateY(-16px);opacity:0;pointer-events:none;background:#12203a;border:1px solid var(--accent);
+  color:var(--text);padding:10px 14px;border-radius:12px;max-width:min(92vw,560px);font-size:13.5px;z-index:50;transition:all .2s ease;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#toast.show{opacity:1;transform:translateX(-50%)}
+.devhead{color:var(--dev);font:700 12px var(--mono);letter-spacing:.14em}
+.sk{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center}
+.sk .nm{font-weight:650} .sk .tot{font:700 20px var(--mono);text-align:right}
+.tier{font:600 10.5px var(--mono);padding:2px 6px;border-radius:5px;letter-spacing:.06em;border:1px solid var(--line2)}
+.tier-Untrained{color:var(--faint)} .tier-Trained{color:#9fd8ff;border-color:#2e6d93} .tier-Proficient{color:var(--good);border-color:#2a7d5a}
+.tier-Expert{color:#ffd166;border-color:#8a6d20} .tier-Master{color:#ff8ad8;border-color:#8a2f6e}
+.marks{display:flex;gap:3px;margin:4px 0} .marks i{flex:1;height:8px;border-radius:2px;background:#132039;border:1px solid var(--line)} .marks i.on{background:var(--accent);border-color:var(--accent)}
+.stepbtn{width:40px;height:38px;border-radius:9px;border:1px solid var(--line2);background:var(--panel2);font-weight:700;font-size:16px}
+.man{padding:10px 0;border-top:1px solid var(--line)} .man:first-child{border-top:0}
+.star{border:0;background:none;font-size:20px;width:40px;height:40px}
+.domdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="topbar"></div>
+<div id="banner"></div>
+<main id="view"></main>
+<nav id="tabs"></nav>
+<div id="sheet"><div class="grab"><div class="grow" id="sheetTitle"></div><button class="iconbtn" data-act="closeSheet" aria-label="Close">✕</button></div><div class="body" id="sheetBody"></div></div>
+<div id="modal"><div class="box" id="modalBox"></div></div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* =====================================================================
+   CONFIGURATION
+   Every value here is a PLAYTEST VALUE — NOT FINAL BUILDWRIGHT CANON.
+   All of it can be changed live from the Developer tab (saved with the
+   backup). Edit these defaults to change what a fresh prototype starts with.
+   ===================================================================== */
+const DEFAULT_CONFIG = {
+  // PLAYTEST VALUE — Web Points a level-1 character starts with
+  startingWebPoints: 5,
+
+  // PLAYTEST VALUES — Web Points granted when reaching each level (level 2+).
+  // Level 1 grants startingWebPoints only.
+  webPointBands: [
+    { min: 1,  max: 5,  perLevel: 5 },
+    { min: 6,  max: 10, perLevel: 7 },
+    { min: 11, max: 15, perLevel: 7 },  // PLAYTEST VALUE
+    { min: 16, max: 20, perLevel: 8 },  // PLAYTEST VALUE
+    { min: 21, max: 40, perLevel: 8 }   // PLAYTEST VALUE — post-20 cap
+  ],
+
+  levelCap: 40,               // hard cap (current design rule)
+
+  // PLAYTEST VALUES — mastery states are qualifications, not bonuses.
+  // Nodes reference tier NAMES, so thresholds can be rebalanced here.
+  masteryTiers: [
+    { name: "Untrained",  min: 0 },
+    { name: "Trained",    min: 10 },
+    { name: "Proficient", min: 20 },
+    { name: "Expert",     min: 30 },
+    { name: "Master",     min: 40 }
+  ],
+  masteryBasis: "rank",       // "rank" (skill value) or "total" (value + attribute mod)
+
+  skillSoftCap: 40,           // PLAYTEST VALUE — soft ceiling, warns only
+  progressMarksPerIncrease: 10,
+  skillIncreasePerFill: 1,
+  maxMarksBetweenLongRests: 1,
+
+  // PLAYTEST VALUES — suggested minimum DC for a check to earn a Progress Mark, by tier
+  progressDCByTier: { Untrained: 8, Trained: 15, Proficient: 22, Expert: 30, Master: 38 },
+
+  includeAttributeModInSkill: true, // displayed modifier = rank + attribute modifier + bonuses
+  flexibleAttributePoints: 2,       // PLAYTEST VALUE — end-of-lifepath adjustment
+  baseAttribute: 10,
+
+  // PLAYTEST VALUES — derived stats (placeholder math)
+  hpBase: 10, hpPerLevel: 5, baseAC: 10, baseSpeed: 30,
+
+  // Fog of war (steps from anything you own)
+  fullVisibilityDepth: 2,     // 1 = adjacent only; 2 = one more readable layer
+  partialVisibilityDepth: 3,  // silhouettes beyond that
+
+  respecMode: "depthLimited", // "depthLimited" | "free" | "disabled" (disabled only warns)
+  forcedPurchasesCostPoints: true,
+
+  // PLAYTEST VALUES — underqualified maneuver guidance (display only)
+  underqualifiedPenalty: "Disadvantage on the maneuver's roll, or its save DC is reduced by 3 (DM's choice).",
+  parryLoseDamageMultiplier: 0.5,
+
+  // Node price edits made in the inspector land here: { nodeId: cost }
+  costOverrides: {},
+
+  // Web layout
+  ringSpacing: 70,
+  ringBase: 90
+};
+
+let CONFIG = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+/* =====================================================================
+   DATA DEFINITIONS
+   Everything below is status "TEST" prototype content. Species, factions
+   and lore are placeholders — replace from the Aegis / Delvian / Khaganate /
+   Free Trade Alliance codices. Nothing here is setting canon.
+   ===================================================================== */
+
+const DOMAINS = [
+  { id: "BOND",       color: "#ff6fb1", blurb: "Companions, teams, partners, protection" },
+  { id: "MIGHT",      color: "#ff4d4d", blurb: "Martial technique, weapons, fighting styles" },
+  { id: "PARACAUSAL", color: "#b073ff", blurb: "Phenomena that break causality" },
+  { id: "SPIRIT",     color: "#fff08a", blurb: "Will, resolve, the psyche" },
+  { id: "MIND",       color: "#3fd0ff", blurb: "Analysis, memory, knowledge, cognition" },
+  { id: "PASSAGE",    color: "#3ff0b0", blurb: "Movement, piloting, navigation" },
+  { id: "FORM",       color: "#ff9a3c", blurb: "Body, endurance, biology, augmentation" },
+  { id: "FORGE",      color: "#c9a24a", blurb: "Engineering, fabrication, technology" },
+  { id: "GUILE",      color: "#7080ff", blurb: "Stealth, deception, security" },
+  { id: "SOCIETY",    color: "#a6e35a", blurb: "Influence, command, institutions" }
+];
+const DOMAIN_BY_ID = Object.fromEntries(DOMAINS.map((d, i) => [d.id, Object.assign({ index: i }, d)]));
+
+const ATTRS = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+const ATTR_NAMES = { STR: "Strength", DEX: "Dexterity", CON: "Constitution", INT: "Intelligence", WIS: "Wisdom", CHA: "Charisma" };
+
+/* ---------- SKILLS (TEST list, 22 representative) ---------- */
+const SKILLS = [
+  { id: "Athletics", attr: "STR" },
+  { id: "Close Combat", attr: "STR", note: "TEST combat skill used by melee maneuvers" },
+  { id: "Acrobatics", attr: "DEX" },
+  { id: "Marksmanship", attr: "DEX", note: "TEST combat skill used by firearm maneuvers" },
+  { id: "Sleight of Hand", attr: "DEX" },
+  { id: "Stealth", attr: "DEX" },
+  { id: "Piloting", attr: "DEX", note: "Spacecraft & aircraft — distinct from Vehicle Operation" },
+  { id: "Vehicle Operation", attr: "DEX" },
+  { id: "Engineering", attr: "INT" },
+  { id: "Advanced Engineering", attr: "INT",
+    unlock: { any: [{ mastery: "Engineering", tier: "Proficient" }, { node: "forge_adv" }] },
+    note: "Unlocked by Proficient Engineering or the Advanced Engineering Access node" },
+  { id: "Computers", attr: "INT" },
+  { id: "Explosives", attr: "INT" },
+  { id: "Astrophysics", attr: "INT" },
+  { id: "Investigation", attr: "INT" },
+  { id: "Xenology", attr: "INT" },
+  { id: "Paracausal Theory", attr: "INT" },
+  { id: "Medicine", attr: "WIS" },
+  { id: "Perception", attr: "WIS" },
+  { id: "Insight", attr: "WIS" },
+  { id: "Survival", attr: "WIS" },
+  { id: "Deception", attr: "CHA" },
+  { id: "Persuasion", attr: "CHA" },
+  { id: "Intimidation", attr: "CHA" },
+  { id: "Command", attr: "CHA" }
+];
+const SKILL_BY_ID = Object.fromEntries(SKILLS.map(s => [s.id, s]));
+
+/* ---------- SPECIES (TEST placeholders — replace from codices) ---------- */
+const SPECIES = [
+  { id: "human", name: "Human", status: "TEST",
+    desc: "Baseline humanity. Placeholder values — replace from the Aegis Commonwealth Codex.",
+    attrs: {}, flex: 1, speed: 30,
+    ages: { childhood: "0–12", adolescence: "13–19", adulthood: "20+" },
+    traits: ["Adaptable (TEST): +1 extra flexible attribute point"], tags: ["human"] },
+  { id: "delvian", name: "Delvian (placeholder)", status: "TEST",
+    desc: "PLACEHOLDER Delvian profile for architecture testing — slower maturation, crystal affinity. Replace from the Delvian Empire Codex.",
+    attrs: { WIS: 2, INT: 1, STR: -1 }, flex: 0, speed: 30,
+    ages: { childhood: "0–30 (TEST)", adolescence: "31–60 (TEST)", adulthood: "61+ (TEST)" },
+    traits: ["Crystal Affinity (TEST): native access to crystal-technology branches"], tags: ["delvian", "crystal_affinity"] },
+  { id: "khaganate", name: "Khaganate Congenate (placeholder)", status: "TEST",
+    desc: "PLACEHOLDER Congenate profile for architecture testing — hardy, fast-maturing. Replace from the Khaganate Codex.",
+    attrs: { CON: 2, STR: 1, CHA: -1 }, flex: 0, speed: 30,
+    ages: { childhood: "0–8 (TEST)", adolescence: "9–14 (TEST)", adulthood: "15+ (TEST)" },
+    traits: ["Hardy (TEST): unlocks Congenate Hardiness in FORM"], tags: ["khaganate", "congenate"] }
+];
+const SPECIES_BY_ID = Object.fromEntries(SPECIES.map(s => [s.id, s]));
+
+/* ---------- ACCESS CATALOG: factions, associations, teachers, knowledge, gear ---------- */
+const ACCESS = {
+  associations: [
+    { id: "aegis_citizen", name: "Aegis Commonwealth Citizenship", cat: "Citizenship" },
+    { id: "aegis_legion", name: "Aegis Legion Service", cat: "Faction" },
+    { id: "aegis_engineering_corps", name: "Commonwealth Engineering Corps (TEST)", cat: "Organization" },
+    { id: "delvian_choir", name: "Delvian Crystal Tradition (TEST)", cat: "Cultural familiarity" },
+    { id: "khaganate_clan", name: "Khaganate Clan Bond (TEST)", cat: "Faction" },
+    { id: "fta_guild", name: "Free Trade Alliance Guild (TEST)", cat: "Organization" },
+    { id: "smuggler_ring", name: "Smuggler Ring (TEST)", cat: "Organization" },
+    { id: "martial_mentor", name: "Martial Mentor (TEST)", cat: "Teacher" },
+    { id: "para_mentor", name: "Paracausal Mentor (TEST)", cat: "Teacher" }
+  ],
+  knowledge: [
+    { id: "fusion_manual", name: "Manual: Fusion Systems (TEST)", cat: "Manual" },
+    { id: "legion_field_db", name: "Legion Field Database (TEST)", cat: "Database" },
+    { id: "fta_trade_db", name: "FTA Trade Registry (TEST)", cat: "Database" },
+    { id: "delvian_crystal_theory", name: "Delvian Crystal Theory (TEST)", cat: "Knowledge" },
+    { id: "xenotech_samples", name: "Xenotech Samples (TEST)", cat: "Captured technology" }
+  ],
+  equipment: [
+    { id: "sidearm", name: "Sidearm" },
+    { id: "battle_rifle", name: "Battle Rifle (can suppress)", tags: ["suppressive_weapon"] },
+    { id: "combat_blade", name: "Combat Blade" },
+    { id: "toolkit", name: "Engineering Toolkit" },
+    { id: "drone_unit", name: "Utility Drone" },
+    { id: "paracausal_relic", name: "Paracausal Relic (TEST)" },
+    { id: "power_armor", name: "Powered Armor (TEST)", ac: 3 },
+    { id: "ship_access", name: "Spacecraft Access (asset)" }
+  ],
+  augmentations: [
+    { id: "cyber_arm", name: "Cybernetic Arm" },
+    { id: "neural_interface", name: "Neural Interface (cognitive)" },
+    { id: "subdermal_plating", name: "Subdermal Plating", ac: 1 }
+  ]
+};
+const ACCESS_KINDS = { associations: "assoc", knowledge: "knowledge", equipment: "equip", augmentations: "aug" };
+const ACCESS_BY_ID = {};
+for (const k in ACCESS) for (const it of ACCESS[k]) ACCESS_BY_ID[it.id] = Object.assign({ kind: k }, it);
+
+/* ---------- EVENTS (TEST) — experience reveals, Web Points acquire ---------- */
+const EVENTS = [
+  { id: "artifact_exposure", name: "Paracausal Artifact Contact", grantsTags: ["paracausal_touched"], desc: "Meaningfully interacted with a paracausal artifact." },
+  { id: "paracausal_exposure", name: "Significant Paracausal Exposure", grantsTags: ["paracausal_touched", "para_exposure_1"], desc: "Stood inside a paracausal event and came out changed." },
+  { id: "deep_exposure", name: "Deep Paracausal Immersion", grantsTags: ["para_exposure_2"], desc: "Prolonged immersion in a paracausal phenomenon." },
+  { id: "paracausal_catastrophe", name: "Paracausal Catastrophe Survivor", grantsTags: ["para_exposure_3"], desc: "Survived a large-scale paracausal disaster." },
+  { id: "near_death", name: "Near-Death Experience", grantsTags: ["survivor"], desc: "Came within moments of dying." },
+  { id: "lost_comrade", name: "Lost a Comrade", grantsTags: [], desc: "Someone you were responsible for did not come home." },
+  { id: "void_breach", name: "Survived a Hull Breach", grantsTags: ["spacer", "survivor"], desc: "Vacuum, decompression, and a fight to stay alive." },
+  { id: "captured_delvian_tech", name: "Captured Delvian Technology", grantsTags: [], desc: "Recovered intact crystal technology." },
+  { id: "gene_therapy", name: "Received Gene Therapy", grantsTags: ["gene_modified"], desc: "Underwent genetic modification." },
+  { id: "ai_partnership", name: "Formed a Synthetic Mind Partnership", grantsTags: ["ai_partner"], desc: "A synthetic intelligence chose to work with you." },
+  { id: "legion_commendation", name: "Legion Commendation", grantsTags: ["decorated"], desc: "Formally recognized for valor." },
+  { id: "first_command", name: "First Command", grantsTags: ["has_led"], desc: "Led others through a crisis." },
+  { id: "betrayed_by_ally", name: "Betrayed by an Ally", grantsTags: ["wary"], desc: "Someone trusted turned on you." },
+  { id: "survived_ambush", name: "Survived an Ambush", grantsTags: ["survivor"], desc: "Caught off guard and lived." }
+];
+const EVENT_BY_ID = Object.fromEntries(EVENTS.map(e => [e.id, e]));
+
+/* ---------- LIFEPATH (modular branching stages) ----------
+   option: { id, name, desc, req, attrs, skills, tags, assoc, knowledge, equipment,
+             events, traits, conditional:[{if, apply:{...same fields}}] }        */
+const LIFEPATH_STAGES = [
+  { id: "species", name: "Species", ageKey: null },
+  { id: "culture", name: "Home & Culture", ageKey: "childhood" },
+  { id: "childhood", name: "Childhood", ageKey: "childhood" },
+  { id: "education", name: "Education", ageKey: "adolescence" },
+  { id: "formative", name: "Formative Experience", ageKey: "adolescence" },
+  { id: "career", name: "Early Career", ageKey: "adulthood" },
+  { id: "final", name: "Finishing Touches", ageKey: "adulthood" }
+];
+
+const LIFEPATH = {
+  culture: [
+    { id: "aegis_core", name: "Commonwealth Core World", desc: "Dense, networked, governed. Paperwork is a native language.",
+      skills: { Computers: 3, Persuasion: 2 }, attrs: { INT: 1 }, assoc: ["aegis_citizen"], tags: ["core_worlder"] },
+    { id: "frontier", name: "Frontier Colony", desc: "Thin supply lines and self-reliance.",
+      skills: { Survival: 4, "Vehicle Operation": 3 }, attrs: { CON: 1 }, tags: ["frontier"] },
+    { id: "fta_station", name: "Free Trade Station", desc: "Docking rings, deals, and hard vacuum outside every wall.",
+      skills: { Persuasion: 3, Piloting: 2 }, attrs: { CHA: 1 }, tags: ["spacer", "trader_culture"] },
+    { id: "delvian_spire", name: "Crystal Spire Enclave (TEST)", desc: "Placeholder Delvian homeland.",
+      req: { species: "delvian" }, skills: { "Paracausal Theory": 3, Xenology: 2 },
+      knowledge: ["delvian_crystal_theory"], assoc: ["delvian_choir"] },
+    { id: "khag_hold", name: "Clan Hold (TEST)", desc: "Placeholder Khaganate homeland.",
+      req: { species: "khaganate" }, skills: { "Close Combat": 4, Intimidation: 3 }, assoc: ["khaganate_clan"] }
+  ],
+  childhood: [
+    { id: "machine_yards", name: "Raised Among Machines", desc: "Shipyards, fabricators, and a toolbox for a toy chest.",
+      req: { any: [{ culture: "aegis_core" }, { culture: "fta_station" }, { culture: "frontier" }] },
+      skills: { Engineering: 5, "Vehicle Operation": 2 }, attrs: { INT: 1 }, tags: ["mechanical_childhood"] },
+    { id: "undercity", name: "Undercity Streets", desc: "Nobody watched out for you, so you learned to watch everything.",
+      req: { not: { culture: "delvian_spire" } },
+      skills: { Stealth: 4, "Sleight of Hand": 4, Deception: 3 }, attrs: { DEX: 1 }, tags: ["street_raised"] },
+    { id: "wilds", name: "Wild Frontier", desc: "Weather, predators, distance.",
+      req: { any: [{ culture: "frontier" }, { culture: "khag_hold" }] },
+      skills: { Survival: 5, Athletics: 3, Perception: 3 }, attrs: { CON: 1 } },
+    { id: "scholarly", name: "Scholarly Household", desc: "Books, arguments at dinner, star charts on the ceiling.",
+      skills: { Investigation: 4, Xenology: 3, Astrophysics: 2 }, attrs: { INT: 1 } },
+    { id: "military_family", name: "Military Family", desc: "Drills, moves, and parents who came home different.",
+      req: { any: [{ culture: "aegis_core" }, { culture: "frontier" }, { culture: "khag_hold" }] },
+      skills: { Athletics: 3, Marksmanship: 3, Command: 2 }, attrs: { STR: 1 } },
+    { id: "spire_choir", name: "Choir Novice (TEST)", desc: "Placeholder Delvian crystal-choir upbringing.",
+      req: { culture: "delvian_spire" }, skills: { "Paracausal Theory": 4, Insight: 3 }, attrs: { WIS: 1 }, tags: ["choir_trained"] },
+    { id: "void_born", name: "Void-Born", desc: "Grew up in microgravity corridors.",
+      req: { culture: "fta_station" }, skills: { Piloting: 4, Acrobatics: 3 }, tags: ["spacer", "zero_g_native"] }
+  ],
+  education: [
+    { id: "tech_academy", name: "Technical Academy", desc: "Formal engineering training.",
+      req: { any: [{ tag: "mechanical_childhood" }, { attr: "INT", min: 12 }] },
+      skills: { Engineering: 6, Computers: 3, Explosives: 2 }, tags: ["technical_education"] },
+    { id: "military_prep", name: "Military Preparatory", desc: "Discipline, marksmanship, fitness.",
+      req: { any: [{ history: "childhood", is: "military_family" }, { attr: "STR", min: 11 }, { attr: "CON", min: 11 }] },
+      skills: { Marksmanship: 4, "Close Combat": 3, Athletics: 2, Medicine: 1 }, tags: ["military_training"] },
+    { id: "street_learning", name: "Street Education", desc: "Taught by con artists and fixers.",
+      req: { tag: "street_raised" }, skills: { Deception: 4, "Sleight of Hand": 2, Insight: 3, Computers: 2 } },
+    { id: "university", name: "Institute of Sciences", desc: "Rigorous academic study.",
+      req: { attr: "INT", min: 11 }, skills: { Astrophysics: 5, Investigation: 3, Medicine: 2, Xenology: 2 }, tags: ["academic"] },
+    { id: "flight_school", name: "Flight School", desc: "Simulators, then the real thing.",
+      req: { any: [{ tag: "spacer" }, { attr: "DEX", min: 11 }] }, skills: { Piloting: 6, Astrophysics: 2, "Vehicle Operation": 2 } },
+    { id: "clan_trials", name: "Clan Warrior Trials (TEST)", desc: "Placeholder Khaganate martial rite.",
+      req: { culture: "khag_hold" }, skills: { "Close Combat": 5, Athletics: 3, Intimidation: 2 }, attrs: { STR: 1 } },
+    { id: "choir_deep", name: "Deep Choir Study (TEST)", desc: "Placeholder advanced Delvian training.",
+      req: { tag: "choir_trained" }, skills: { "Paracausal Theory": 5, Insight: 2 }, tags: ["paracausal_touched"] },
+    { id: "self_taught", name: "Self-Taught", desc: "Whatever you could find, whenever you could find it.",
+      skills: { Survival: 2, Investigation: 2, Engineering: 2 }, attrs: { WIS: 1 } }
+  ],
+  formative: [
+    { id: "impossible", name: "Encountered the Impossible", desc: "Something happened that physics says cannot.",
+      events: ["artifact_exposure"], attrs: { WIS: 1 }, skills: { "Paracausal Theory": 2 } },
+    { id: "hull_breach", name: "Survived a Hull Breach", desc: "The wall opened. You didn't die.",
+      events: ["void_breach"], attrs: { CON: 1 } },
+    { id: "betrayal", name: "Betrayed", desc: "You trusted the wrong person.",
+      events: ["betrayed_by_ally"], skills: { Insight: 3 }, attrs: { WIS: 1 } },
+    { id: "led_crisis", name: "Led Others Through Crisis", desc: "Everyone looked at you, so you acted.",
+      events: ["first_command"], skills: { Command: 4 }, attrs: { CHA: 1 } },
+    { id: "lost_everything", name: "Lost Everything", desc: "Home, people, certainty — gone.",
+      events: ["lost_comrade"], skills: { Survival: 2 }, attrs: { CON: 1 }, tags: ["survivor"] },
+    { id: "martial_master", name: "Taken In by a Martial Master", desc: "Someone saw potential and beat it into shape.",
+      assoc: ["martial_mentor"], skills: { "Close Combat": 3, Athletics: 1 } },
+    { id: "researcher_apprentice", name: "Apprenticed to a Researcher", desc: "Late nights with things from other worlds.",
+      req: { attr: "INT", min: 11 }, knowledge: ["xenotech_samples"], skills: { Investigation: 2, Xenology: 2 } }
+  ],
+  career: [
+    { id: "engineer", name: "Engineer", desc: "Years keeping complicated things alive.",
+      req: { any: [{ tag: "technical_education" }, { skill: "Engineering", min: 8 }] },
+      skills: { Engineering: 6, Computers: 2 }, equipment: ["toolkit"],
+      conditional: [{ if: { assoc: "aegis_citizen" }, apply: { assoc: ["aegis_engineering_corps"] } }] },
+    { id: "soldier", name: "Soldier", desc: "Infantry service.",
+      req: { any: [{ tag: "military_training" }, { attr: "STR", min: 12 }, { culture: "khag_hold" }] },
+      skills: { Marksmanship: 5, "Close Combat": 3, Athletics: 2 }, equipment: ["battle_rifle", "sidearm"],
+      conditional: [{ if: { assoc: "aegis_citizen" }, apply: { assoc: ["aegis_legion"], knowledge: ["legion_field_db"] } }] },
+    { id: "pilot", name: "Pilot", desc: "Hauling, flying escort, whatever paid.",
+      req: { mastery: "Piloting", tier: "Trained" }, skills: { Piloting: 6, Astrophysics: 2 }, equipment: ["sidearm", "ship_access"], tags: ["pilot"] },
+    { id: "smuggler", name: "Smuggler", desc: "Cargo that doesn't appear on manifests.",
+      req: { any: [{ tag: "street_raised" }, { tag: "spacer" }] },
+      skills: { Deception: 4, Piloting: 3, Stealth: 2 }, assoc: ["smuggler_ring"], equipment: ["sidearm"] },
+    { id: "diplomat", name: "Diplomatic Aide", desc: "Rooms where words decide wars.",
+      req: { attr: "CHA", min: 11 }, skills: { Persuasion: 5, Insight: 3, Xenology: 3 } },
+    { id: "medic", name: "Medic", desc: "Field clinics and triage.",
+      req: { skill: "Medicine", min: 1 }, skills: { Medicine: 6, Insight: 2 } },
+    { id: "researcher", name: "Researcher", desc: "Labs, samples, and anomalies.",
+      req: { any: [{ tag: "academic" }, { history: "education", is: "choir_deep" }, { knowledge: "xenotech_samples" }] },
+      skills: { Investigation: 4, "Paracausal Theory": 3, Xenology: 3 }, knowledge: ["xenotech_samples"] },
+    { id: "trader", name: "Trader", desc: "Buy low, fly far, sell high.",
+      req: { any: [{ tag: "trader_culture" }, { attr: "CHA", min: 11 }] },
+      skills: { Persuasion: 4, Insight: 2, "Vehicle Operation": 2 }, assoc: ["fta_guild"], knowledge: ["fta_trade_db"] },
+    { id: "mercenary", name: "Mercenary", desc: "Fighting for whoever pays.",
+      skills: { Marksmanship: 3, "Close Combat": 3, Intimidation: 2 }, equipment: ["sidearm", "combat_blade"] }
+  ]
+};
+
+/* ---------- NODES (≈110 TEST nodes) ----------
+   N(id, name, domains "A" or "A/B", type, cost, parents, extra)
+   types: entry | small | cap | maneuver | style | major
+   extra: d (description), m (mechanics), req (purchase prereq),
+          exists (instantiation condition — conditional content),
+          reveal (visible from afar when true), op (operational requirement),
+          g (grants: attrs, skills, hp, ac, init, speed, tags, maneuvers[]),
+          mr (maneuver mastery requirement {skill, tier}), parentMode "all"     */
+const NODES = [];
+function N(id, name, domains, type, cost, parents, x) {
+  x = x || {};
+  NODES.push({
+    id, name, domains: domains.split("/"), type, cost, parents,
+    description: x.d || "", mechanics: x.m || "",
+    req: x.req || null, exists: x.exists || null, reveal: x.reveal || null, op: x.op || null,
+    grants: x.g || {}, masteryReq: x.mr || null, parentMode: x.parentMode || "any",
+    status: "TEST"
+  });
+}
+const MAN = (name, desc, mr) => ({ name, desc, masteryReq: mr || null });
+
+/* MIGHT */
+N("might_entry", "Martial Foundations", "MIGHT", "entry", 1, ["root"], {
+  d: "Entry package: the basics every fighter relies on.",
+  m: "Grants three foundational maneuvers.",
+  g: { maneuvers: [MAN("Shove", "Push a target 5 ft or knock it prone (contested Athletics)."),
+                   MAN("Feint", "Bonus action: Deception vs Insight; next attack has advantage."),
+                   MAN("Guarded Stance", "Until your next turn, +2 AC, speed halved.")] } });
+N("might_conditioning", "Combat Conditioning", "MIGHT", "small", 1, ["might_entry"], { d: "Hardened by drills.", m: "+3 max HP.", g: { hp: 3 } });
+N("might_parry", "Parry", "MIGHT", "cap", 2, ["might_entry"], {
+  d: "Turn an incoming blow with your own.",
+  m: "Held Action/Reaction: when hit by a melee attack, roll Close Combat vs the attack roll. Win: attack prevented. Lose: attack hits for reduced damage (see CONFIG.parryLoseDamageMultiplier).",
+  mr: { skill: "Close Combat", tier: "Trained" } });
+N("might_dive", "Dive for Cover", "MIGHT", "cap", 1, ["might_entry"], { d: "Hit the deck.", m: "Reaction: move 5 ft into cover and drop prone; +2 vs the triggering attack or area effect." });
+N("might_style_blade", "Fighting Style: Bladework", "MIGHT", "style", 3, ["might_entry"], {
+  d: "A complete bladework repertoire.", m: "Grants four blade maneuvers.",
+  g: { maneuvers: [MAN("Riposte", "After a successful Parry, make one melee attack.", { skill: "Close Combat", tier: "Trained" }),
+                   MAN("Hamstring", "On hit, target's speed is halved until end of its next turn."),
+                   MAN("Bind", "Contested: lock the target's weapon; it has disadvantage on its next attack."),
+                   MAN("Flowing Cut", "On a kill, move 10 ft and attack again.", { skill: "Close Combat", tier: "Proficient" })] } });
+N("might_style_firearms", "Fighting Style: Firearms Discipline", "MIGHT", "style", 3, ["might_entry"], {
+  d: "Doctrine for modern ranged combat.", m: "Grants four firearm maneuvers.",
+  g: { maneuvers: [MAN("Marksman Fire", "Single aimed attack mode."),
+                   MAN("Suppressive Fire", "One full firing action: 30–60 ft cone (weapon-dependent). Targets take damage or have speed reduced and grant advantage. Requires a suppress-capable weapon.", { skill: "Marksmanship", tier: "Trained" }),
+                   MAN("Held Suppression", "Hold Suppressive Fire; trigger when an enemy enters the area.", { skill: "Marksmanship", tier: "Proficient" }),
+                   MAN("Combat Reload", "Reload as part of movement.")] } });
+N("might_style_brawl", "Fighting Style: Close Quarters", "MIGHT", "style", 2, ["might_entry"], {
+  d: "Dirty, fast, effective.", m: "Grants three unarmed maneuvers.",
+  g: { maneuvers: [MAN("Clinch", "Grapple as a bonus action after a hit."),
+                   MAN("Headbutt", "In a grapple: target makes CON save or is dazed."),
+                   MAN("Throw", "Hurl a grappled target 10 ft.", { skill: "Athletics", tier: "Trained" })] } });
+N("might_identify", "Identify Weakness (Martial)", "MIGHT", "cap", 2, ["might_parry", "might_style_brawl"], {
+  d: "Read stance, injuries, balance, openings.", m: "Bonus action: Perception or Close Combat vs DC; learn one exploitable opening (advantage on next attack).",
+  req: { any: [{ mastery: "Close Combat", tier: "Trained" }, { mastery: "Perception", tier: "Trained" }] } });
+N("might_disarm", "Parry: Disarm", "MIGHT", "maneuver", 1, ["might_parry"], { d: "Strip the weapon.", m: "On a winning Parry by 5+, disarm the attacker.", mr: { skill: "Close Combat", tier: "Proficient" } });
+N("might_breaker", "Parry: Weapon Breaker", "MIGHT", "maneuver", 2, ["might_disarm"], { d: "Break it instead.", m: "On a winning Parry by 10+, damage the attacker's weapon.", req: { attr: "STR", min: 15 } });
+N("might_double_tap", "Second Marksman Attack", "MIGHT", "major", 5, ["might_style_firearms"], {
+  d: "Training lets you place two aimed shots.", m: "Marksman Fire makes two attacks. Suppressive Fire is unaffected.",
+  req: { mastery: "Marksmanship", tier: "Proficient" } });
+N("might_sentinel", "Sentinel", "MIGHT", "major", 5, ["might_identify"], {
+  d: "Nothing gets past you.", m: "Opportunity attacks reduce speed to 0; creatures within reach provoke even when disengaging.",
+  req: { mastery: "Close Combat", tier: "Proficient" } });
+N("might_legion_drill", "Legion Close-Order Drill", "MIGHT", "cap", 2, ["might_style_firearms"], {
+  d: "Institutional doctrine — only instantiated through Legion association.",
+  m: "Adjacent allies with this node grant each other +1 AC.",
+  exists: { assoc: "aegis_legion" } });
+N("might_legion_doctrine", "Legion Fire Doctrine", "MIGHT", "major", 4, ["might_legion_drill"], {
+  d: "Coordinated fire discipline.", m: "When an ally suppresses, your Marksman attacks against suppressed targets crit on 19–20.",
+  exists: { assoc: "aegis_legion" }, req: { mastery: "Marksmanship", tier: "Trained" } });
+N("might_clan_forms", "Clan Blade Forms (TEST)", "MIGHT", "style", 3, ["might_style_blade"], {
+  d: "Placeholder Khaganate martial style — native to Congenates or clan-bonded characters.",
+  m: "Grants two clan maneuvers.",
+  exists: { any: [{ species: "khaganate" }, { assoc: "khaganate_clan" }] },
+  g: { maneuvers: [MAN("Blood Oath Strike", "Mark a foe; +2 damage against it until it drops."),
+                   MAN("Clan Rush", "Move up to speed in a line and attack each creature passed.", { skill: "Close Combat", tier: "Proficient" })] } });
+
+/* PARACAUSAL */
+N("para_entry", "Paracausal Sensitivity", "PARACAUSAL", "entry", 1, ["root"], {
+  d: "You notice when causality flickers. The beginning — not power, perception.",
+  m: "Advantage on checks to notice paracausal phenomena. Enables PARACAUSAL development.", g: { tags: ["para_sensitive"] } });
+N("para_ward", "Instinctive Ward", "PARACAUSAL", "cap", 2, ["para_entry"], { d: "Flinch reality away from you.", m: "Reaction: +3 to a save against a paracausal effect.", req: { attr: "WIS", min: 12 } });
+N("para_theory", "Structured Channeling", "PARACAUSAL", "cap", 2, ["para_entry"], { d: "Theory applied.", m: "Use Paracausal Theory for paracausal checks instead of Wisdom-based guesswork.", req: { skill: "Paracausal Theory", min: 5 } });
+N("para_resonance", "Resonant Perception", "PARACAUSAL", "cap", 2, ["para_entry"], {
+  d: "Appears only after a real encounter with the paracausal.",
+  m: "Sense active paracausal effects within 60 ft.",
+  exists: { tag: "paracausal_touched" } });
+N("para_echo", "Echo Reading", "PARACAUSAL", "cap", 3, ["para_resonance"], { d: "Read the residue an artifact leaves.", m: "Touch an object: learn one paracausal event it was part of.", exists: { event: "artifact_exposure" } });
+N("para_displace", "Kinetic Displacement", "PARACAUSAL", "cap", 3, ["para_resonance"], { d: "Push without touching.", m: "Action: move a Medium object/creature 10 ft (STR save).", exists: { tag: "para_exposure_1" } });
+N("para_attune", "Artifact Attunement", "PARACAUSAL", "major", 5, ["para_echo"], {
+  d: "Bond to a relic.", m: "While carrying an attuned relic, once per long rest reroll a failed save. Requires the relic to function.",
+  exists: { event: "artifact_exposure" }, op: { equip: "paracausal_relic" } });
+N("para_bulwark", "Resonant Bulwark", "PARACAUSAL/SPIRIT", "major", 5, ["para_ward"], {
+  d: "Your will becomes a shield.", m: "Allies within 10 ft gain your Ward reaction.", req: { mastery: "Paracausal Theory", tier: "Trained" } });
+N("para_guided", "Guided Channeling", "PARACAUSAL", "cap", 2, ["para_theory"], { d: "A mentor's method.", m: "Advantage on Paracausal Theory checks to control an effect.", exists: { assoc: "para_mentor" } });
+N("para_crystal", "Crystal Resonance (TEST)", "PARACAUSAL/FORGE", "cap", 3, ["para_resonance"], {
+  d: "Delvian-flavored resonance. Different characters get this from the same event.",
+  m: "Crystal technology you touch operates at +1 tier.",
+  exists: { all: [{ any: [{ species: "delvian" }, { assoc: "delvian_choir" }] }, { tag: "paracausal_touched" }] } });
+N("para_deep", "Deep Resonance", "PARACAUSAL", "major", 8, ["para_displace"], {
+  d: "Expensive: this is where paracausal power starts to scale.", m: "Paracausal effects you create have +1 range band and +2 DC.",
+  exists: { tag: "para_exposure_2" }, req: { attr: "WIS", min: 14 } });
+N("para_surge", "Paracausal Surge", "PARACAUSAL", "major", 12, ["para_deep"], {
+  d: "Very expensive. Rule-breaking.", m: "Once per long rest, take an additional full action that must be paracausal.",
+  exists: { tag: "para_exposure_3" } });
+N("para_reverse", "Artifact Reverse-Engineering", "FORGE/PARACAUSAL", "major", 6, ["para_echo", "forge_identify"], {
+  d: "Same artifact event — only engineers see this.", m: "Downtime: analyze a relic to produce a non-paracausal technical analogue (DM adjudicates).",
+  exists: { all: [{ event: "artifact_exposure" }, { mastery: "Engineering", tier: "Proficient" }] } });
+
+/* SPIRIT */
+N("spirit_entry", "Inner Resolve", "SPIRIT", "entry", 1, ["root"], { d: "Entry package: steadiness under pressure.", m: "Advantage on the first save vs fear each long rest; +1 Wisdom saves." });
+N("spirit_steady", "Steady Mind", "SPIRIT", "small", 1, ["spirit_entry"], { m: "+1 initiative.", g: { init: 1 } });
+N("spirit_grit", "Grit", "SPIRIT", "small", 1, ["spirit_entry"], { m: "+2 max HP.", g: { hp: 2 } });
+N("spirit_identify", "Identify Weakness (Psyche)", "SPIRIT", "cap", 2, ["spirit_entry"], {
+  d: "Read fear, doubt, conviction.", m: "Insight vs DC: learn a target's psychological lever; advantage on next social or fear effect vs it.",
+  req: { mastery: "Insight", tier: "Trained" } });
+N("spirit_calm", "Calm Under Fire", "SPIRIT", "cap", 2, ["spirit_steady"], { m: "Suppression does not reduce your speed.", req: { attr: "WIS", min: 13 } });
+N("spirit_conviction", "Conviction", "SPIRIT", "cap", 2, ["spirit_steady"], { m: "Once per short rest, add +2 to any save after seeing the roll." });
+N("spirit_unbroken", "Unbroken", "SPIRIT", "major", 4, ["spirit_grit"], {
+  d: "Story prerequisite: you must have nearly died.", m: "When reduced to 0 HP, drop to 1 instead (once per long rest).",
+  req: { tag: "survivor" } });
+N("spirit_will", "Indomitable Will", "SPIRIT", "major", 5, ["spirit_calm"], { m: "Immune to the frightened condition.", req: { mastery: "Insight", tier: "Proficient" } });
+N("spirit_dreams", "Resonant Dreams", "SPIRIT/PARACAUSAL", "cap", 3, ["spirit_conviction", "para_entry"], {
+  d: "Hybrid: appears after significant exposure.", m: "After a long rest, gain one cryptic insight about a current mystery.",
+  exists: { tag: "para_exposure_1" } });
+N("spirit_fallen", "Carry the Fallen", "SPIRIT", "cap", 2, ["spirit_grit"], { d: "Loss, turned to purpose.", m: "Advantage on death saves; allies below half HP within 30 ft gain +1 to saves.", exists: { event: "lost_comrade" } });
+
+/* MIND */
+N("mind_entry", "Analytical Foundations", "MIND", "entry", 1, ["root"], { d: "Entry package: structured thinking.", m: "+1 Investigation; once per short rest, reroll a failed Intelligence check.", g: { skills: { Investigation: 1 } } });
+N("mind_research", "Research Methodology", "MIND", "small", 1, ["mind_entry"], { m: "+1 Investigation.", g: { skills: { Investigation: 1 } } });
+N("mind_recall", "Eidetic Recall", "MIND", "cap", 2, ["mind_entry"], { m: "Perfectly recall anything you've seen in the last month.", req: { attr: "INT", min: 13 } });
+N("mind_xeno", "Xenotech Familiarity", "MIND", "cap", 2, ["mind_entry"], { d: "Basic operation of foreign tech.", m: "No disadvantage operating unfamiliar alien equipment at a basic level.", req: { skill: "Xenology", min: 3 } });
+N("mind_tactics", "Tactical Analysis", "MIND/MIGHT", "cap", 2, ["mind_entry", "might_entry"], { m: "Bonus action: grant one ally advantage on its next attack against a target you can see." });
+N("mind_database", "Database Mining", "MIND", "cap", 2, ["mind_research"], { d: "Requires access to a real database.", m: "Downtime queries answer one specific factual question.", exists: { any: [{ knowledge: "legion_field_db" }, { knowledge: "fta_trade_db" }] } });
+N("mind_astro", "Astrogation Theory", "MIND/PASSAGE", "cap", 2, ["mind_research"], { m: "Halve time for jump calculations.", req: { mastery: "Astrophysics", tier: "Trained" } });
+N("mind_neural", "Neural Interface Processing", "MIND/FORM", "cap", 3, ["mind_recall"], {
+  d: "Authored augmentation exception: cognitive hardware exposes this.", m: "Interface directly with networked systems; Computers checks take half time.",
+  exists: { aug: "neural_interface" }, op: { aug: "neural_interface" } });
+N("mind_parallel", "Parallel Cognition", "MIND", "major", 6, ["mind_neural"], { m: "Maintain two concentration effects or analyses at once.", exists: { aug: "neural_interface" }, op: { aug: "neural_interface" }, req: { attr: "INT", min: 15 } });
+N("mind_polymath", "Polymath", "MIND", "major", 5, ["mind_recall"], { m: "Once per long rest, treat any knowledge skill as Proficient for one check.", req: { all: [{ mastery: "Investigation", tier: "Proficient" }, { mastery: "Engineering", tier: "Trained" }] } });
+
+/* PASSAGE */
+N("pass_entry", "Fleet of Foot", "PASSAGE", "entry", 1, ["root"], { d: "Entry package: move better.", m: "+5 ft speed; Dash costs no reaction penalty.", g: { speed: 5 } });
+N("pass_sprint", "Combat Sprint", "PASSAGE", "maneuver", 1, ["pass_entry"], { m: "Dash as a bonus action; attacks against you have disadvantage until you stop." });
+N("pass_climb", "Vertical Movement", "PASSAGE", "cap", 1, ["pass_entry"], { m: "Climbing costs no extra movement.", req: { skill: "Athletics", min: 3 } });
+N("pass_driver", "Convoy Driving", "PASSAGE", "cap", 1, ["pass_entry"], { m: "Ground vehicles you drive ignore difficult terrain once per round.", req: { mastery: "Vehicle Operation", tier: "Trained" } });
+N("pass_pilot", "Pilot Fundamentals", "PASSAGE", "cap", 2, ["pass_entry"], { m: "Advantage on routine flight maneuvers.", req: { mastery: "Piloting", tier: "Trained" } });
+N("pass_evasive", "Evasive Flight", "PASSAGE", "cap", 3, ["pass_pilot"], { m: "Your craft gains +2 AC when moving at speed.", req: { mastery: "Piloting", tier: "Proficient" }, op: { equip: "ship_access" } });
+N("pass_combat_pilot", "Combat Piloting", "PASSAGE", "major", 5, ["pass_evasive"], { m: "Pilot and fire ship weapons in the same turn.", req: { mastery: "Piloting", tier: "Expert" }, op: { equip: "ship_access" } });
+N("pass_zero_g", "Zero-G Maneuvering", "PASSAGE", "cap", 2, ["pass_climb"], { d: "Only exists for spacers.", m: "No penalties in microgravity; push off surfaces for double movement.", exists: { tag: "spacer" } });
+N("pass_jump", "Jump Navigation", "PASSAGE/MIND", "major", 4, ["pass_pilot", "mind_astro"], { m: "Plot jumps without a nav computer.", req: { mastery: "Astrophysics", tier: "Proficient" } });
+N("pass_ghost", "Ghost Step", "PASSAGE/GUILE", "cap", 2, ["pass_sprint"], { m: "Moving at full speed doesn't impose disadvantage on Stealth.", req: { skill: "Stealth", min: 8 } });
+
+/* FORM */
+N("form_entry", "Physical Conditioning", "FORM", "entry", 1, ["root"], { d: "Entry package: a body built for trouble.", m: "+4 max HP; advantage on exhaustion saves.", g: { hp: 4 } });
+N("form_str", "Strength Training", "FORM", "small", 2, ["form_entry"], { m: "+1 Strength.", g: { attrs: { STR: 1 } } });
+N("form_dex", "Reflex Training", "FORM", "small", 2, ["form_entry"], { m: "+1 Dexterity.", g: { attrs: { DEX: 1 } } });
+N("form_con", "Endurance Training", "FORM", "small", 2, ["form_entry"], { m: "+1 Constitution.", g: { attrs: { CON: 1 } } });
+N("form_iron", "Iron Constitution", "FORM", "cap", 3, ["form_con"], { m: "Advantage vs toxins and disease.", req: { attr: "CON", min: 14 } });
+N("form_armor", "Heavy Armor Conditioning", "FORM", "cap", 2, ["form_str"], { m: "+1 AC while armored; no speed penalty from powered armor.", req: { attr: "STR", min: 13 }, g: { ac: 1 } });
+N("form_hardiness", "Congenate Hardiness (TEST)", "FORM", "small", 1, ["form_entry"], { d: "Species-specific content (placeholder).", m: "+4 max HP.", exists: { species: "khaganate" }, g: { hp: 4 } });
+N("form_cyber_arm", "Cybernetic Arm Integration", "FORM", "cap", 2, ["form_str"], {
+  d: "Owned ability, hardware-dependent.", m: "Use your arm's STR 18 for lifting and grappling.",
+  exists: { aug: "cyber_arm" }, op: { aug: "cyber_arm" } });
+N("form_grip", "Hydraulic Grip", "FORM", "maneuver", 1, ["form_cyber_arm"], { m: "Grappled targets take 1d6 crushing each turn.", exists: { aug: "cyber_arm" }, op: { aug: "cyber_arm" } });
+N("form_arm_weapon", "Integrated Arm Weapon", "FORM/FORGE", "cap", 3, ["form_cyber_arm"], { m: "Concealed weapon mount in your arm.", req: { mastery: "Engineering", tier: "Trained" }, op: { aug: "cyber_arm" } });
+N("form_gene", "Gene-Tuned Physiology", "FORM", "major", 5, ["form_iron"], { m: "Choose one: darkvision 60 ft, +10 ft speed, or resistance to one damage type.", exists: { tag: "gene_modified" } });
+
+/* FORGE */
+N("forge_entry", "Technician's Foundations", "FORGE", "entry", 1, ["root"], { d: "Entry package: keep things running.", m: "Jury-rig a broken device for one scene (Engineering DC set by DM)." });
+N("forge_repair", "Field Repair", "FORGE", "cap", 1, ["forge_entry"], { m: "Short rest: restore a damaged item or 1d8 + INT HP to a drone/vehicle.", req: { mastery: "Engineering", tier: "Trained" } });
+N("forge_identify", "Identify Weakness (Material)", "FORGE", "cap", 2, ["forge_entry"], { d: "Read armor, materials, weapons.", m: "Bonus action: learn a target's armor weak point; your next attack ignores 2 AC.", req: { mastery: "Engineering", tier: "Trained" } });
+N("forge_explosives", "Demolitions Craft", "FORGE", "cap", 2, ["forge_entry"], { m: "Prepare shaped charges; double damage to structures.", req: { mastery: "Explosives", tier: "Trained" } });
+N("forge_mod", "Weapon Modification", "FORGE", "cap", 2, ["forge_repair"], { m: "Downtime: add one mod to a weapon. Needs a toolkit.", op: { equip: "toolkit" } });
+N("forge_adv", "Advanced Engineering Access", "FORGE", "cap", 3, ["forge_repair"], { d: "Unlocks the Advanced Engineering skill even before Proficiency.", m: "Advanced Engineering skill becomes usable.", req: { skill: "Engineering", min: 15 } });
+N("forge_drone", "Drone Fabrication", "FORGE/BOND", "cap", 3, ["forge_mod"], { m: "Build a utility drone during downtime.", req: { mastery: "Engineering", tier: "Proficient" } });
+N("forge_crystal", "Crystal Charging", "FORGE/PARACAUSAL", "cap", 2, ["forge_entry"], {
+  d: "Foreign technology: native to Delvians, learnable from theory or captured tech.", m: "Recharge Delvian crystal cells.",
+  exists: { any: [{ species: "delvian" }, { knowledge: "delvian_crystal_theory" }, { event: "captured_delvian_tech" }] } });
+N("forge_reverse", "Reverse Engineering", "FORGE", "cap", 3, ["forge_identify"], {
+  m: "Downtime: learn how a captured device works; may expose new nodes.",
+  exists: { any: [{ event: "captured_delvian_tech" }, { event: "artifact_exposure" }, { knowledge: "xenotech_samples" }] },
+  req: { mastery: "Engineering", tier: "Proficient" } });
+N("forge_fusion", "Fusion Systems", "FORGE", "major", 6, ["forge_adv"], {
+  d: "Knowledge can exceed execution: you may see this before you can buy it.", m: "Build and maintain fusion reactors (colony/industrial hook).",
+  exists: { any: [{ knowledge: "fusion_manual" }, { assoc: "aegis_engineering_corps" }] },
+  req: { mastery: "Advanced Engineering", tier: "Trained" } });
+N("forge_armorsmith", "Armor Fabrication", "FORGE", "major", 5, ["forge_adv"], { m: "Fabricate and upgrade armor.", req: { mastery: "Advanced Engineering", tier: "Proficient" } });
+N("forge_foundry", "Industrial Foundry Planning", "FORGE", "major", 8, ["forge_fusion"], { d: "Stub for future colony/stronghold systems.", m: "Design production lines (not simulated in v0.1).", req: { mastery: "Advanced Engineering", tier: "Expert" } });
+
+/* GUILE */
+N("guile_entry", "Street Instincts", "GUILE", "entry", 1, ["root"], { d: "Entry package: never the easy mark.", m: "Can't be surprised in crowds; advantage to spot pickpockets and tails." });
+N("guile_palm", "Quick Palm", "GUILE", "maneuver", 1, ["guile_entry"], { m: "Sleight of Hand as a bonus action.", req: { skill: "Sleight of Hand", min: 3 } });
+N("guile_tongue", "Silver Tongue", "GUILE", "small", 1, ["guile_entry"], { m: "+1 Deception.", g: { skills: { Deception: 1 } } });
+N("guile_shadow", "Shadow Discipline", "GUILE", "cap", 2, ["guile_entry"], { m: "Hide in dim light while observed.", req: { mastery: "Stealth", tier: "Trained" } });
+N("guile_ambush", "Ambush Strike", "GUILE/MIGHT", "maneuver", 2, ["guile_shadow", "might_entry"], { m: "Attacks from hiding deal +1d6 and the target can't react." });
+N("guile_identity", "Assumed Identity", "GUILE", "cap", 2, ["guile_tongue"], { m: "Maintain a cover identity with documents.", req: { mastery: "Deception", tier: "Trained" } });
+N("guile_bypass", "Security Bypass", "GUILE", "cap", 2, ["guile_entry"], { m: "Computers for locks and alarms; failure by <5 doesn't trigger alarms.", req: { mastery: "Computers", tier: "Trained" } });
+N("guile_network", "Smuggler's Network", "GUILE", "cap", 2, ["guile_identity"], {
+  m: "Acquire contraband or passage through contacts.",
+  exists: { any: [{ history: "career", is: "smuggler" }, { assoc: "smuggler_ring" }] } });
+N("guile_ghost", "Ghost Protocol", "GUILE", "major", 5, ["guile_shadow"], { m: "While hidden, you leave no sensor signature.", req: { mastery: "Stealth", tier: "Expert" } });
+
+/* SOCIETY */
+N("soc_entry", "Social Fluency", "SOCIETY", "entry", 1, ["root"], { d: "Entry package: people make sense to you.", m: "+1 Persuasion; learn one cultural custom per new culture met.", g: { skills: { Persuasion: 1 } } });
+N("soc_read", "Read the Room", "SOCIETY", "cap", 1, ["soc_entry"], { m: "On entering a gathering, learn who holds power.", req: { skill: "Insight", min: 3 } });
+N("soc_command", "Field Command", "SOCIETY", "cap", 2, ["soc_entry"], { m: "Allies who can hear you add +1 to initiative.", req: { mastery: "Command", tier: "Trained" } });
+N("soc_rally", "Rallying Order", "SOCIETY", "maneuver", 1, ["soc_command"], { m: "Bonus action: an ally regains 1d6 + CHA HP.", mr: { skill: "Command", tier: "Trained" } });
+N("soc_bargain", "Hard Bargain", "SOCIETY", "cap", 2, ["soc_read"], { m: "Prices shift 20% in your favor.", req: { mastery: "Persuasion", tier: "Trained" } });
+N("soc_diplomat", "Cross-Cultural Protocol", "SOCIETY", "cap", 2, ["soc_read"], { m: "No disadvantage on social checks with other species.", req: { skill: "Xenology", min: 5 } });
+N("soc_civic", "Commonwealth Civic Rights", "SOCIETY", "cap", 1, ["soc_entry"], { m: "Legal standing, records access, due process.", exists: { assoc: "aegis_citizen" } });
+N("soc_bureau", "Bureaucratic Leverage", "SOCIETY", "cap", 2, ["soc_civic"], { m: "Expedite permits, requisitions and records.", exists: { assoc: "aegis_citizen" }, req: { mastery: "Persuasion", tier: "Trained" } });
+N("soc_guild", "Trade Guild Contacts", "SOCIETY", "cap", 2, ["soc_bargain"], { m: "Buy and sell at guild rates in FTA space.", exists: { assoc: "fta_guild" } });
+N("soc_charter", "Chartered Merchant", "SOCIETY", "major", 4, ["soc_guild"], { m: "Hold a trade charter; operate under guild protection.", exists: { assoc: "fta_guild" }, req: { mastery: "Persuasion", tier: "Proficient" } });
+N("soc_centurion", "Centurion's Authority", "SOCIETY/MIGHT", "major", 5, ["soc_command"], { d: "Legion-only institutional authority.", m: "Command a Legion squad as a single unit.", exists: { assoc: "aegis_legion" }, req: { mastery: "Command", tier: "Proficient" } });
+
+/* BOND */
+N("bond_entry", "Loyal Bonds", "BOND", "entry", 1, ["root"], { d: "Entry package: you fight better together.", m: "Help action can be used at 30 ft range." });
+N("bond_assist", "Coordinated Assist", "BOND", "maneuver", 1, ["bond_entry"], { m: "When you Help, the ally also gains +2 damage." });
+N("bond_protector", "Protector's Instinct", "BOND", "cap", 2, ["bond_assist"], { m: "Reaction: swap places with an adjacent ally and take the hit." });
+N("bond_squad", "Squad Cohesion", "BOND", "cap", 2, ["bond_assist"], { m: "Allies within 30 ft can use your reaction once per round.", req: { skill: "Command", min: 3 } });
+N("bond_beast", "Animal Companion (TEST)", "BOND", "cap", 3, ["bond_entry"], { m: "Gain a trained companion creature.", req: { mastery: "Survival", tier: "Trained" } });
+N("bond_drone", "Drone Companion", "BOND/FORGE", "cap", 3, ["bond_entry"], { m: "Your drone acts on your initiative. Requires a drone.", op: { equip: "drone_unit" } });
+N("bond_mentor", "Mentor's Legacy", "BOND", "cap", 2, ["bond_entry"], { m: "Once per session, ask what your mentor would do; gain advantage on it.", exists: { any: [{ assoc: "martial_mentor" }, { assoc: "para_mentor" }] } });
+N("bond_ai", "Synthetic Mind Partnership (TEST)", "BOND/MIND", "major", 5, ["bond_drone"], { m: "A partner intelligence grants one extra reaction per round.", exists: { tag: "ai_partner" } });
+N("bond_swarm", "Drone Swarm Control", "BOND/FORGE", "major", 6, ["bond_drone", "forge_drone"], { m: "Control up to INT-mod drones as one action.", req: { mastery: "Computers", tier: "Proficient" } });
+N("bond_lastline", "Last Line", "BOND", "major", 4, ["bond_protector"], { d: "Story prerequisite.", m: "When an ally within 30 ft would drop to 0, you may take the damage instead.", req: { event: "lost_comrade" } });
+
+const NODE_BY_ID = Object.fromEntries(NODES.map(n => [n.id, n]));
+/* =====================================================================
+   UTILITIES
+   ===================================================================== */
+const clone = o => JSON.parse(JSON.stringify(o));
+const uid = () => "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const attrMod = v => Math.floor((v - 10) / 2);
+const signed = n => (n >= 0 ? "+" : "") + n;
+function nodeCost(n) { const o = CONFIG.costOverrides && CONFIG.costOverrides[n.id]; return (o !== undefined && o !== null && o !== "") ? Number(o) : n.cost; }
+function labelFor(kind, id) {
+  if (kind === "node") return (NODE_BY_ID[id] || {}).name || id;
+  if (kind === "event") return (EVENT_BY_ID[id] || {}).name || id;
+  if (kind === "species") return (SPECIES_BY_ID[id] || {}).name || id;
+  if (ACCESS_BY_ID[id]) return ACCESS_BY_ID[id].name;
+  return id;
+}
+
+/* =====================================================================
+   SKILL ENGINE (tiers)
+   ===================================================================== */
+function tiers() { return CONFIG.masteryTiers.slice().sort((a, b) => a.min - b.min); }
+function tierIndex(name) { return tiers().findIndex(t => t.name.toLowerCase() === String(name).toLowerCase()); }
+function tierOf(value) { let t = tiers()[0]; for (const x of tiers()) if (value >= x.min) t = x; return t.name; }
+function nextTier(value) { return tiers().find(t => t.min > value) || null; }
+
+/* =====================================================================
+   PREREQUISITE ENGINE
+   One evaluator for lifepath options, node prereqs, existence, reveal,
+   operational requirements, and skill unlocks. Returns ok + explanation.
+   ctx: { attrs, rank(skill), total(skill), tags, assoc, knowledge,
+          equipment, aug, events, species, history, level, hasNode(id) }
+   ===================================================================== */
+function evalExpr(expr, ctx, indent) {
+  indent = indent || 0;
+  if (!expr) return { ok: true, lines: [] };
+  if (Array.isArray(expr)) expr = { all: expr };
+  const L = (ok, text) => ({ ok, lines: [{ ok, text, indent }] });
+
+  if (expr.all || expr.any) {
+    const list = expr.all || expr.any;
+    const subs = list.map(e => evalExpr(e, ctx, indent + 1));
+    const ok = expr.all ? subs.every(s => s.ok) : subs.some(s => s.ok);
+    if (list.length === 1) return evalExpr(list[0], ctx, indent);
+    return { ok, lines: [{ ok, text: expr.all ? "All of:" : "Any one of:", indent, group: true }].concat(...subs.map(s => s.lines)) };
+  }
+  if (expr.not) {
+    const s = evalExpr(expr.not, ctx, indent + 1);
+    return { ok: !s.ok, lines: [{ ok: !s.ok, text: "None of the following:", indent, group: true }].concat(s.lines.map(l => Object.assign({}, l, { ok: !l.ok }))) };
+  }
+  if (expr.node !== undefined) return L(ctx.hasNode(expr.node), "Owns node: " + labelFor("node", expr.node));
+  if (expr.level !== undefined) return L(ctx.level >= expr.level, `Character level ${expr.level}+ (current ${ctx.level})`);
+  if (expr.attr) { const v = ctx.attrs[expr.attr] || 0; return L(v >= expr.min, `${ATTR_NAMES[expr.attr]} ${expr.min}+ (current ${v})`); }
+  if (expr.skill) { const v = ctx.rank(expr.skill); return L(v >= expr.min, `${expr.skill} ${expr.min}+ (current ${v})`); }
+  if (expr.mastery) {
+    const v = CONFIG.masteryBasis === "total" ? ctx.total(expr.mastery) : ctx.rank(expr.mastery);
+    const cur = tierOf(v), need = tierIndex(expr.tier);
+    const ok = need >= 0 && tierIndex(cur) >= need;
+    return L(ok, `${expr.tier} ${expr.mastery} (current: ${cur}, ${v})`);
+  }
+  if (expr.tag) return L(ctx.tags.has(expr.tag), "Character tag: " + expr.tag);
+  if (expr.event) return L(ctx.events.has(expr.event), "Experience: " + labelFor("event", expr.event));
+  if (expr.assoc || expr.faction) { const id = expr.assoc || expr.faction; return L(ctx.assoc.has(id), "Association: " + labelFor("assoc", id)); }
+  if (expr.knowledge) return L(ctx.knowledge.has(expr.knowledge), "Knowledge: " + labelFor("k", expr.knowledge));
+  if (expr.equip) return L(ctx.equipment.has(expr.equip), "Equipment: " + labelFor("e", expr.equip));
+  if (expr.aug) return L(ctx.aug.has(expr.aug), "Augmentation: " + labelFor("a", expr.aug));
+  if (expr.species) return L(ctx.species === expr.species, "Species: " + labelFor("species", expr.species));
+  if (expr.culture) return L(ctx.history.culture === expr.culture, "Culture: " + lifepathName("culture", expr.culture));
+  if (expr.history) return L(ctx.history[expr.history] === expr.is, `History (${expr.history}): ${lifepathName(expr.history, expr.is)}`);
+  return L(false, "Unknown condition " + JSON.stringify(expr));
+}
+function lifepathName(stage, id) { const o = (LIFEPATH[stage] || []).find(x => x.id === id); return o ? o.name : id; }
+
+/* =====================================================================
+   CHARACTER MODEL
+   history = foundational Lifepath choices (read-only once finalized)
+   everything else is post-creation state; derived stats are recomputed.
+   ===================================================================== */
+function newCharacter() {
+  return {
+    id: uid(), name: "", version: 1, created: Date.now(), updated: Date.now(),
+    history: { species: null, culture: null, childhood: null, education: null, formative: null, career: null,
+               age: "", flex: { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 }, startingLevel: 1, finalized: false },
+    level: 1, bonusWP: 0,
+    skills: {},                       // { skill: { gained, marks, markedSinceRest } }
+    owned: {},                        // { nodeId: { at, cost, forced } }
+    state: { associations: [], knowledge: [], equipment: [], augmentations: [], events: [], tags: [], removed: [] },
+    overrides: { nodes: {}, attrs: { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 } },
+    seen: [], favorites: [], pinned: [],
+    respec: { cap: null },
+    log: []
+  };
+}
+function logChar(ch, msg) { ch.log.unshift({ t: Date.now(), msg }); if (ch.log.length > 300) ch.log.length = 300; }
+
+/* =====================================================================
+   LIFEPATH ENGINE
+   Replays stages in order against a draft. Earlier choices gate later
+   options; invalidated later choices are cleared and reported.
+   ===================================================================== */
+function blankDraft() {
+  const attrs = {}; ATTRS.forEach(a => attrs[a] = CONFIG.baseAttribute);
+  return { attrs, skills: {}, tags: new Set(), assoc: new Set(), knowledge: new Set(), equipment: new Set(),
+           aug: new Set(), events: new Set(), traits: [], flex: CONFIG.flexibleAttributePoints, species: null, speed: CONFIG.baseSpeed };
+}
+function draftCtx(d, history) {
+  return { attrs: d.attrs, rank: s => d.skills[s] || 0, total: s => d.skills[s] || 0, tags: d.tags, assoc: d.assoc,
+           knowledge: d.knowledge, equipment: d.equipment, aug: d.aug, events: d.events, species: d.species,
+           history: history, level: 1, hasNode: () => false };
+}
+function applyPackage(d, p) {
+  for (const a in (p.attrs || {})) d.attrs[a] += p.attrs[a];
+  for (const s in (p.skills || {})) d.skills[s] = (d.skills[s] || 0) + p.skills[s];
+  (p.tags || []).forEach(t => d.tags.add(t));
+  (p.assoc || []).forEach(t => d.assoc.add(t));
+  (p.knowledge || []).forEach(t => d.knowledge.add(t));
+  (p.equipment || []).forEach(t => d.equipment.add(t));
+  (p.events || []).forEach(t => { d.events.add(t); ((EVENT_BY_ID[t] || {}).grantsTags || []).forEach(g => d.tags.add(g)); });
+  (p.traits || []).forEach(t => d.traits.push(t));
+}
+function buildLifepath(history) {
+  const d = blankDraft();
+  const partialHist = {};
+  const stages = []; const invalidated = [];
+  for (const st of LIFEPATH_STAGES) {
+    if (st.id === "final") break;
+    let options, chosen = history[st.id] || null;
+    if (st.id === "species") {
+      options = SPECIES.map(s => ({ opt: s, available: true, res: { ok: true, lines: [] } }));
+    } else {
+      const ctx = draftCtx(d, partialHist);
+      options = LIFEPATH[st.id].map(o => { const res = evalExpr(o.req, ctx); return { opt: o, available: res.ok, res }; });
+    }
+    if (chosen) {
+      const entry = options.find(o => o.opt.id === chosen);
+      if (!entry || !entry.available) { invalidated.push({ stage: st.id, id: chosen }); chosen = null; }
+    }
+    if (chosen) {
+      partialHist[st.id] = chosen;
+      if (st.id === "species") {
+        const sp = SPECIES_BY_ID[chosen]; d.species = chosen;
+        applyPackage(d, { attrs: sp.attrs, tags: sp.tags, traits: sp.traits });
+        d.flex += sp.flex || 0; d.speed = sp.speed || CONFIG.baseSpeed;
+      } else {
+        const o = LIFEPATH[st.id].find(x => x.id === chosen);
+        applyPackage(d, o);
+        for (const c of (o.conditional || [])) if (evalExpr(c.if, draftCtx(d, partialHist)).ok) applyPackage(d, c.apply);
+      }
+    }
+    stages.push({ stage: st, options, chosen });
+  }
+  return { draft: d, stages, invalidated, history: partialHist };
+}
+/** Applies lifepath edits and clears choices that became invalid. Returns invalidated list. */
+function setLifepathChoice(ch, stage, id) {
+  ch.history[stage] = id;
+  const r = buildLifepath(ch.history);
+  r.invalidated.forEach(x => { ch.history[x.stage] = null; });
+  return r.invalidated;
+}
+function lifepathComplete(ch) {
+  return LIFEPATH_STAGES.every(s => s.id === "final" || ch.history[s.id]);
+}
+
+/* =====================================================================
+   DERIVATION — history + state + owned nodes → current character
+   ===================================================================== */
+function deriveCharacter(ch) {
+  const lp = buildLifepath(ch.history);
+  const d = lp.draft;
+  const removed = new Set(ch.state.removed || []);
+  const mk = (kind, base, extra) => { const s = new Set([...base, ...(extra || [])]); for (const x of [...s]) if (removed.has(kind + ":" + x)) s.delete(x); return s; };
+  const assoc = mk("assoc", d.assoc, ch.state.associations);
+  const knowledge = mk("knowledge", d.knowledge, ch.state.knowledge);
+  const equipment = mk("equip", d.equipment, ch.state.equipment);
+  const aug = mk("aug", d.aug, ch.state.augmentations);
+  const events = mk("event", d.events, ch.state.events);
+  const tags = new Set([...d.tags, ...(ch.state.tags || [])]);
+  events.forEach(e => ((EVENT_BY_ID[e] || {}).grantsTags || []).forEach(t => tags.add(t)));
+  equipment.forEach(e => ((ACCESS_BY_ID[e] || {}).tags || []).forEach(t => tags.add(t)));
+  for (const x of [...tags]) if (removed.has("tag:" + x)) tags.delete(x);
+
+  const attrs = {};
+  ATTRS.forEach(a => attrs[a] = d.attrs[a] + (ch.history.flex[a] || 0) + ((ch.overrides.attrs || {})[a] || 0));
+  const ranks = {};
+  SKILLS.forEach(s => ranks[s.id] = (d.skills[s.id] || 0) + ((ch.skills[s.id] || {}).gained || 0));
+
+  const ctx = {
+    attrs, rank: s => ranks[s] || 0, total: s => ranks[s] || 0, tags, assoc, knowledge, equipment, aug, events,
+    species: ch.history.species, history: ch.history, level: ch.level, hasNode: id => id === "root" || !!ch.owned[id]
+  };
+
+  // Operational status & grants of owned nodes
+  const operational = {}; const skillBonus = {}; let hp = 0, ac = 0, init = 0, speed = 0; const maneuvers = [];
+  for (const id in ch.owned) {
+    const n = NODE_BY_ID[id]; if (!n) continue;
+    const opRes = evalExpr(n.op, ctx); operational[id] = opRes;
+    if (!opRes.ok) continue;
+    const g = n.grants || {};
+    for (const a in (g.attrs || {})) attrs[a] += g.attrs[a];
+    for (const s in (g.skills || {})) skillBonus[s] = (skillBonus[s] || 0) + g.skills[s];
+    (g.tags || []).forEach(t => tags.add(t));
+    hp += g.hp || 0; ac += g.ac || 0; init += g.init || 0; speed += g.speed || 0;
+  }
+  for (const id in ch.owned) {
+    const n = NODE_BY_ID[id]; if (!n) continue;
+    const active = operational[id] && operational[id].ok;
+    if (n.type === "maneuver") maneuvers.push({ name: n.name, desc: n.mechanics, masteryReq: n.masteryReq, source: n, active });
+    (n.grants.maneuvers || []).forEach(m => maneuvers.push(Object.assign({ source: n, active }, m)));
+    if (n.type !== "maneuver" && n.masteryReq && !(n.grants.maneuvers || []).length)
+      maneuvers.push({ name: n.name, desc: n.mechanics, masteryReq: n.masteryReq, source: n, active, isAbility: true });
+  }
+  const mods = {}; ATTRS.forEach(a => mods[a] = attrMod(attrs[a]));
+  const skills = {};
+  for (const s of SKILLS) {
+    const rank = ranks[s.id];
+    const total = rank + (CONFIG.includeAttributeModInSkill ? mods[s.attr] : 0) + (skillBonus[s.id] || 0);
+    const st = ch.skills[s.id] || {};
+    skills[s.id] = { rank, total, bonus: skillBonus[s.id] || 0, attr: s.attr, marks: st.marks || 0, markedSinceRest: !!st.markedSinceRest, lifepath: d.skills[s.id] || 0 };
+  }
+  ctx.total = s => skills[s] ? skills[s].total : 0;
+  for (const s of SKILLS) { skills[s.id].tier = tierOf(CONFIG.masteryBasis === "total" ? skills[s.id].total : skills[s.id].rank);
+    skills[s.id].unlock = evalExpr(s.unlock, ctx); }
+  maneuvers.forEach(m => { m.qualified = m.masteryReq ? evalExpr({ mastery: m.masteryReq.skill, tier: m.masteryReq.tier }, ctx).ok : true; });
+
+  let armorAC = 0; equipment.forEach(e => armorAC = Math.max(armorAC, (ACCESS_BY_ID[e] || {}).ac || 0));
+  aug.forEach(e => armorAC += (ACCESS_BY_ID[e] || {}).ac || 0);
+  const wp = webPoints(ch);
+  return {
+    lp, attrs, mods, skills, tags, assoc, knowledge, equipment, aug, events, ctx, operational, maneuvers,
+    species: ch.history.species, traits: d.traits,
+    hp: CONFIG.hpBase + mods.CON + (ch.level - 1) * (CONFIG.hpPerLevel + mods.CON) + hp,
+    ac: CONFIG.baseAC + mods.DEX + ac + armorAC, init: mods.DEX + init, speed: d.speed + speed, wp
+  };
+}
+
+/* =====================================================================
+   WEB POINTS
+   ===================================================================== */
+function perLevelWP(L) { const b = CONFIG.webPointBands.find(b => L >= b.min && L <= b.max); return b ? Number(b.perLevel) : 0; }
+function wpEarnedAtLevel(level) { let t = Number(CONFIG.startingWebPoints); for (let L = 2; L <= level; L++) t += perLevelWP(L); return t; }
+function webPoints(ch) {
+  const earned = wpEarnedAtLevel(ch.level) + Number(ch.bonusWP || 0);
+  let spent = 0;
+  for (const id in ch.owned) { const o = ch.owned[id]; if (o.forced && !CONFIG.forcedPurchasesCostPoints) continue; spent += Number(o.cost || 0); }
+  return { earned, spent, banked: earned - spent };
+}
+
+/* =====================================================================
+   WEB ENGINE — layout + personal-web evaluation (fog, instantiation)
+   ===================================================================== */
+const CHILDREN = {};
+NODES.forEach(n => n.parents.forEach(p => (CHILDREN[p] = CHILDREN[p] || []).push(n.id)));
+let LAYOUT = null;
+function computeLayout() {
+  const depth = { root: 0 };
+  const getDepth = id => { if (depth[id] !== undefined) return depth[id]; const n = NODE_BY_ID[id]; depth[id] = 99;
+    depth[id] = 1 + Math.max(...n.parents.map(getDepth)); return depth[id]; };
+  NODES.forEach(n => getDepth(n.id));
+  const domAngle = dom => (-90 + DOMAIN_BY_ID[dom].index * 36) * Math.PI / 180;
+  const angDiff = (a, b) => { let x = b - a; while (x > Math.PI) x -= 2 * Math.PI; while (x < -Math.PI) x += 2 * Math.PI; return x; };
+  const pos = { root: { x: 0, y: 0, depth: 0, angle: 0, r: 0 } };
+  const maxD = Math.max(...Object.values(depth));
+  for (let dd = 1; dd <= maxD; dd++) {
+    const ring = NODES.filter(n => depth[n.id] === dd);
+    const r = CONFIG.ringBase + (dd - 1) * CONFIG.ringSpacing;
+    ring.forEach(n => {
+      const ps = n.parents.filter(p => p !== "root" && pos[p]);
+      let a;
+      if (!ps.length) a = domAngle(n.domains[0]);
+      else { const sx = ps.reduce((s, p) => s + Math.cos(pos[p].angle), 0), sy = ps.reduce((s, p) => s + Math.sin(pos[p].angle), 0); a = Math.atan2(sy, sx); }
+      // pull toward own primary domain (keeps branches inside their sector)
+      a = a + angDiff(a, domAngle(n.domains[0])) * (ps.length ? 0.35 : 0);
+      if (n.domains[1]) a = a + angDiff(a, domAngle(n.domains[1])) * 0.25;
+      n._a = a;
+    });
+    ring.sort((x, y) => x._a - y._a);
+    const minSep = 40 / r;
+    for (let it = 0; it < 200; it++) {
+      for (let i = 0; i < ring.length; i++) {
+        const A = ring[i], B = ring[(i + 1) % ring.length]; if (A === B) continue;
+        let gap = angDiff(A._a, B._a); if (i === ring.length - 1) gap = (B._a + 2 * Math.PI) - A._a;
+        if (gap < minSep) { const push = (minSep - gap) / 2; A._a -= push; B._a += push; }
+      }
+    }
+    ring.forEach(n => { pos[n.id] = { x: Math.cos(n._a) * r, y: Math.sin(n._a) * r, depth: dd, angle: n._a, r }; });
+  }
+  LAYOUT = { pos, depth, maxR: CONFIG.ringBase + (maxD - 1) * CONFIG.ringSpacing, domAngle };
+  return LAYOUT;
+}
+
+const VISIBLE_STATES = new Set(["owned", "inactive", "available", "locked", "faded"]);
+function evaluateWeb(ch, D) {
+  D = D || deriveCharacter(ch);
+  if (!LAYOUT) computeLayout();
+  const ctx = D.ctx; const seen = new Set(ch.seen || []);
+  const res = {};
+  const exists = {};
+  NODES.forEach(n => { const e = evalExpr(n.exists, ctx); exists[n.id] = e; });
+  // BFS distance from owned set (root always owned)
+  const dist = { root: 0 }; const q = ["root"];
+  Object.keys(ch.owned).forEach(id => { if (NODE_BY_ID[id]) { dist[id] = 0; q.push(id); } });
+  while (q.length) { const id = q.shift(); for (const c of (CHILDREN[id] || [])) {
+      if (!exists[c].ok && !ch.owned[c]) continue;
+      if (dist[c] === undefined) { dist[c] = dist[id] + 1; q.push(c); } } }
+  const sorted = NODES.slice().sort((a, b) => LAYOUT.depth[a.id] - LAYOUT.depth[b.id]);
+  for (const n of sorted) {
+    const owned = !!ch.owned[n.id];
+    const parentsOwned = n.parents.filter(p => ctx.hasNode(p));
+    const adjacent = n.parentMode === "all" ? parentsOwned.length === n.parents.length : parentsOwned.length > 0;
+    const req = evalExpr(n.req, ctx); const op = evalExpr(n.op, ctx); const reveal = n.reveal ? evalExpr(n.reveal, ctx) : null;
+    const r = { id: n.id, exists: exists[n.id], req, op, reveal, adjacent, parentsOwned, dist: dist[n.id], conditional: !!n.exists };
+    let s;
+    if (owned) { s = op.ok ? "owned" : "inactive"; r.orphan = !adjacent; }
+    else if (!exists[n.id].ok) s = (seen.has(n.id) && parentsOwned.length) ? "faded" : "absent";
+    else if (adjacent) s = req.ok ? "available" : "locked";
+    else if (dist[n.id] !== undefined && dist[n.id] <= CONFIG.fullVisibilityDepth) s = "locked";
+    else if (reveal && reveal.ok) s = "locked";
+    else if (dist[n.id] !== undefined && dist[n.id] <= CONFIG.partialVisibilityDepth) s = "partial";
+    else s = "hidden";
+    const ov = (ch.overrides.nodes || {})[n.id];
+    if (ov && !owned) {
+      if (ov === "reveal" && (s === "hidden" || s === "partial" || s === "absent")) s = (adjacent && req.ok) ? "available" : "locked";
+      if (ov === "lock" && s === "available") s = "locked";
+      if (ov === "hide") s = "hidden";
+      r.override = ov;
+    }
+    if (s === "available" && ch.respec && ch.respec.cap && CONFIG.respecMode === "depthLimited") {
+      const capD = ch.respec.cap[n.domains[0]] || 0;
+      if (LAYOUT.depth[n.id] > capD) r.respecBlocked = `Deeper than this domain reached before respec (depth ${capD})`;
+    }
+    r.state = s; res[n.id] = r;
+  }
+  return res;
+}
+
+function explainNode(ch, id, web, D) {
+  const n = NODE_BY_ID[id]; const r = web[id]; const out = [];
+  if (n.exists) out.push({ title: r.exists.ok ? "Instantiated in your Web because" : "Not currently part of your Web — requires", res: r.exists });
+  const pn = n.parents.map(p => p === "root" ? "Character foundation" : labelFor("node", p));
+  out.push({ title: "Connection", res: { ok: r.adjacent, lines: [{ ok: r.adjacent, indent: 0,
+    text: (n.parentMode === "all" ? "Owns all of: " : "Owns a connected node: ") + pn.join(" / ") }] } });
+  if (n.req) out.push({ title: r.req.ok ? "Prerequisites satisfied" : "Currently locked — prerequisites", res: r.req });
+  if (n.op) out.push({ title: r.op.ok ? "Operational" : "Operational requirement unmet (owned but inactive)", res: r.op });
+  if (r.override) out.push({ title: "Developer override", res: { ok: true, lines: [{ ok: true, indent: 0, text: "Forced: " + r.override }] } });
+  if (r.respecBlocked) out.push({ title: "Respec depth limit", res: { ok: false, lines: [{ ok: false, indent: 0, text: r.respecBlocked }] } });
+  if (r.orphan) out.push({ title: "Orphaned", res: { ok: false, lines: [{ ok: false, indent: 0, text: "Owned, but no owned connection remains (kept — purchased abilities are retained)" }] } });
+  return out;
+}
+
+/* =====================================================================
+   NODE PURCHASING / RESPEC
+   Warns and explains; never hard-blocks (force is always available).
+   ===================================================================== */
+function purchaseCheck(ch, id, web, D) {
+  const n = NODE_BY_ID[id]; const r = web[id]; const reasons = [];
+  if (ch.owned[id]) reasons.push("Already owned.");
+  else {
+    if (r.state !== "available") reasons.push(r.state === "locked" ? (r.adjacent ? "Prerequisite currently unsatisfied." : "Not connected to anything you own.") :
+      r.state === "faded" ? "Access to this branch was lost." : "Not currently reachable.");
+    if (D.wp.banked < nodeCost(n)) reasons.push(`Insufficient Web Points (${D.wp.banked} banked, costs ${nodeCost(n)}).`);
+    if (r.respecBlocked) reasons.push(r.respecBlocked + ".");
+  }
+  return { ok: reasons.length === 0, reasons };
+}
+function purchaseNode(ch, id, forced) {
+  const n = NODE_BY_ID[id];
+  ch.owned[id] = { at: Date.now(), cost: nodeCost(n), forced: !!forced };
+  if (!ch.seen.includes(id)) ch.seen.push(id);
+  return `${forced ? "Force-purchased" : "Purchased"} ${n.name} (−${nodeCost(n)} WP)`;
+}
+function dependentsOf(ch, id) {
+  const deps = [];
+  for (const oid in ch.owned) {
+    if (oid === id) continue; const n = NODE_BY_ID[oid]; if (!n) continue;
+    const others = n.parents.filter(p => p !== id && (p === "root" || ch.owned[p]));
+    const viaParent = n.parents.includes(id) && (n.parentMode === "all" || others.length === 0);
+    const viaReq = JSON.stringify(n.req || {}).includes(`"node":"${id}"`);
+    if (viaParent || viaReq) deps.push(oid);
+  }
+  return deps;
+}
+function refundNode(ch, id) { const n = NODE_BY_ID[id]; const c = ch.owned[id] ? ch.owned[id].cost : 0; delete ch.owned[id]; return `Refunded ${n.name} (+${c} WP)`; }
+function respecAll(ch) {
+  if (!LAYOUT) computeLayout();
+  const cap = {};
+  for (const id in ch.owned) { const n = NODE_BY_ID[id]; if (!n) continue; const d0 = n.domains[0]; cap[d0] = Math.max(cap[d0] || 0, LAYOUT.depth[id]); }
+  const count = Object.keys(ch.owned).length;
+  ch.owned = {}; ch.respec.cap = cap;
+  return `Respec: refunded ${count} nodes. Depth-limited cap recorded per domain.`;
+}
+
+/* =====================================================================
+   SKILL PROGRESSION
+   ===================================================================== */
+function skillState(ch, s) { return ch.skills[s] = ch.skills[s] || { gained: 0, marks: 0, markedSinceRest: false }; }
+function addProgressMark(ch, s) {
+  const st = skillState(ch, s); const msgs = [];
+  st.marks += 1; st.markedSinceRest = true;
+  while (st.marks >= CONFIG.progressMarksPerIncrease) {
+    st.marks -= CONFIG.progressMarksPerIncrease; st.gained += Number(CONFIG.skillIncreasePerFill);
+    msgs.push(`${s} increased by ${CONFIG.skillIncreasePerFill}!`);
+  }
+  return msgs;
+}
+function removeProgressMark(ch, s) { const st = skillState(ch, s); if (st.marks > 0) st.marks -= 1; }
+function changeRank(ch, s, delta) { skillState(ch, s).gained += delta; }
+function longRest(ch) { for (const s in ch.skills) ch.skills[s].markedSinceRest = false; }
+
+/* =====================================================================
+   EVENT ENGINE + RECALCULATION LOG
+   Every state change goes through mutate(): snapshot → change → diff → log.
+   ===================================================================== */
+function snapshot(ch) {
+  const D = deriveCharacter(ch); const web = evaluateWeb(ch, D);
+  const tiersNow = {}; for (const s in D.skills) tiersNow[s] = D.skills[s].tier;
+  return { D, web, tiers: tiersNow };
+}
+function diffSnapshots(a, b) {
+  const c = { instantiated: 0, revealed: 0, available: 0, lost: 0, locked: 0, connections: 0, inactive: 0, reactivated: 0, names: [] };
+  for (const id in b.web) {
+    const s0 = a.web[id].state, s1 = b.web[id].state;
+    if (s0 === s1) continue;
+    const vis0 = VISIBLE_STATES.has(s0), vis1 = VISIBLE_STATES.has(s1);
+    if (s0 === "absent" && s1 !== "absent") { c.instantiated++; c.names.push(NODE_BY_ID[id].name); }
+    if (!vis0 && vis1 && s1 !== "faded") c.revealed++;
+    if (s1 === "available" && s0 !== "available" && s0 !== "owned") c.available++;
+    if ((s1 === "absent" || s1 === "faded") && s0 !== "absent" && s0 !== "faded") c.lost++;
+    if (s0 === "available" && s1 === "locked") c.locked++;
+    if (s0 === "owned" && s1 === "inactive") c.inactive++;
+    if (s0 === "inactive" && s1 === "owned") c.reactivated++;
+  }
+  for (const n of NODES) for (const p of n.parents) {
+    if (p === "root") continue;
+    const v = w => VISIBLE_STATES.has(w.web[n.id].state) && VISIBLE_STATES.has(w.web[p].state);
+    if (!v(a) && v(b)) c.connections++;
+  }
+  const tierChanges = [];
+  for (const s in b.tiers) if (a.tiers[s] !== b.tiers[s]) tierChanges.push(`${s}: ${a.tiers[s]} → ${b.tiers[s]}`);
+  c.tierChanges = tierChanges;
+  return c;
+}
+function summarizeDiff(c) {
+  const parts = [];
+  if (c.tierChanges.length) parts.push("Mastery: " + c.tierChanges.join(", "));
+  if (c.instantiated) parts.push(`${c.instantiated} node${c.instantiated > 1 ? "s" : ""} instantiated (${c.names.slice(0, 4).join(", ")}${c.names.length > 4 ? "…" : ""})`);
+  if (c.revealed) parts.push(`${c.revealed} revealed`);
+  if (c.available) parts.push(`${c.available} became purchasable`);
+  if (c.connections) parts.push(`${c.connections} new connection${c.connections > 1 ? "s" : ""}`);
+  if (c.lost) parts.push(`${c.lost} faded/removed`);
+  if (c.locked) parts.push(`${c.locked} locked`);
+  if (c.inactive) parts.push(`${c.inactive} owned node${c.inactive > 1 ? "s" : ""} now inactive`);
+  if (c.reactivated) parts.push(`${c.reactivated} reactivated`);
+  return parts.join(". ");
+}
+/** Run a change, record what it did to the Web, and log it. Returns {label, summary, diff}. */
+function mutate(ch, label, fn) {
+  const a = snapshot(ch);
+  const extra = fn(ch);
+  const b = snapshot(ch);
+  for (const id in b.web) if (b.web[id].state !== "absent" && b.web[id].state !== "hidden" && !ch.seen.includes(id) && VISIBLE_STATES.has(b.web[id].state)) ch.seen.push(id);
+  const diff = diffSnapshots(a, b);
+  const summary = summarizeDiff(diff);
+  const lbl = typeof extra === "string" ? extra : label;
+  if (lbl) logChar(ch, lbl + (summary ? ". " + summary + "." : "."));
+  ch.updated = Date.now();
+  return { label: lbl, summary, diff, extra };
+}
+function markSeenNow(ch) { const s = snapshot(ch); for (const id in s.web) if (VISIBLE_STATES.has(s.web[id].state) && !ch.seen.includes(id)) ch.seen.push(id); }
+
+/* =====================================================================
+   BALANCE STATISTICS
+   ===================================================================== */
+function balanceStats(ch) {
+  const D = deriveCharacter(ch); const web = evaluateWeb(ch, D);
+  const byDomain = {}; DOMAINS.forEach(d => byDomain[d.id] = 0);
+  for (const id in ch.owned) { const n = NODE_BY_ID[id]; if (!n) continue; const c = ch.owned[id].cost / n.domains.length; n.domains.forEach(dm => byDomain[dm] += c); }
+  const counts = {}; for (const id in web) counts[web[id].state] = (counts[web[id].state] || 0) + 1;
+  let best = null; for (const s in D.skills) if (!best || D.skills[s].total > D.skills[best].total) best = s;
+  const cond = NODES.filter(n => n.exists && web[n.id].exists.ok).length;
+  const authoredByDomain = {}; DOMAINS.forEach(d => authoredByDomain[d.id] = { count: 0, cost: 0 });
+  NODES.forEach(n => n.domains.forEach(dm => { authoredByDomain[dm].count += 1 / n.domains.length; authoredByDomain[dm].cost += nodeCost(n) / n.domains.length; }));
+  const tierCounts = {}; for (const s in D.skills) tierCounts[D.skills[s].tier] = (tierCounts[D.skills[s].tier] || 0) + 1;
+  return { D, web, byDomain, counts, best, cond, authoredByDomain, tierCounts,
+    revealed: (counts.available || 0) + (counts.locked || 0) + (counts.faded || 0),
+    maneuvers: D.maneuvers.filter(m => !m.isAbility).length, nodesOwned: Object.keys(ch.owned).length };
+}
+
+/* =====================================================================
+   STORAGE — localStorage when available, JSON export/import always
+   ===================================================================== */
+const STORE_KEY = "buildwright.v01";
+const Storage_ = {
+  ok: (() => { try { const k = "__bw_t"; localStorage.setItem(k, "1"); localStorage.removeItem(k); return true; } catch (e) { return false; } })(),
+  mem: null,
+  load() {
+    let data = null;
+    if (this.ok) { try { data = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch (e) { data = null; } }
+    if (!data) data = this.mem || { version: 1, config: null, characters: {}, settings: {} };
+    return data;
+  },
+  save(data) { this.mem = data; if (this.ok) { try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); return true; } catch (e) { return false; } } return false; }
+};
+function applyConfig(cfg) {
+  CONFIG = Object.assign(clone(DEFAULT_CONFIG), cfg || {});
+  LAYOUT = null; computeLayout();
+}
+function validateCharacter(o) {
+  if (!o || typeof o !== "object" || !o.history || !o.owned) throw new Error("Not a Buildwright character (missing history/owned).");
+  const base = newCharacter();
+  const c = Object.assign(base, o);
+  c.state = Object.assign(newCharacter().state, o.state || {});
+  c.overrides = Object.assign(newCharacter().overrides, o.overrides || {});
+  c.history = Object.assign(newCharacter().history, o.history || {});
+  c.respec = c.respec || { cap: null }; c.seen = c.seen || []; c.log = c.log || [];
+  return c;
+}
+/* =====================================================================
+   UI — core, app state, helpers
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s === undefined || s === null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const App = {
+  store: null, liveId: null, planning: null,
+  screen: "library", tab: "web", lpStage: 0,
+  view: null, selected: null,
+  filters: { domain: "", search: "", showHidden: false, legend: false },
+  man: { q: "", domain: "", kind: "", favOnly: false },
+  pending: null, devNode: "", lastInvalid: []
+};
+
+function saveStore() { App.store.config = CONFIG; const ok = Storage_.save(App.store); return ok; }
+function live() { return App.store.characters[App.liveId]; }
+function active() { return App.planning || live(); }
+function isPlanning() { return !!App.planning; }
+
+let toastTimer = null;
+function toast(msg, ms) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), ms || Math.min(6000, 1800 + msg.length * 35));
+}
+function modal(html) { $("#modalBox").innerHTML = html; $("#modal").classList.add("open"); }
+function closeModal() { $("#modal").classList.remove("open"); App.pending = null; }
+function confirmBox(title, body, okLabel, onOk, cls) {
+  App.pending = onOk;
+  modal(`<h2>${esc(title)}</h2><div style="margin:8px 0 16px">${body}</div>
+    <div class="row"><button class="btn ghost grow" data-act="closeModal">Cancel</button>
+    <button class="btn ${cls || "primary"} grow" data-act="confirmOk">${esc(okLabel || "OK")}</button></div>`);
+}
+
+/** Apply a change to the active character (live or planning), log it, save if live. */
+function commit(label, fn, opts) {
+  const ch = active(); if (!ch) return;
+  const r = mutate(ch, label, fn);
+  if (!isPlanning()) saveStore();
+  if (!(opts && opts.quiet)) toast((isPlanning() ? "[PLAN] " : "") + (r.label || label) + (r.summary ? " — " + r.summary : ""));
+  render();
+  return r;
+}
+
+function fxHtml(p, withCond) {
+  if (!p) return "";
+  const out = [];
+  for (const a in (p.attrs || {})) out.push(`<span class="a">${a} ${signed(p.attrs[a])}</span>`);
+  for (const s in (p.skills || {})) out.push(`<span class="s">${esc(s)} ${signed(p.skills[s])}</span>`);
+  (p.assoc || []).forEach(x => out.push(`<span class="q">◈ ${esc(labelFor("assoc", x))}</span>`));
+  (p.knowledge || []).forEach(x => out.push(`<span class="q">▤ ${esc(labelFor("k", x))}</span>`));
+  (p.equipment || []).forEach(x => out.push(`<span class="q">⚙ ${esc(labelFor("e", x))}</span>`));
+  (p.events || []).forEach(x => out.push(`<span class="e">✦ ${esc(labelFor("event", x))}</span>`));
+  (p.tags || []).forEach(x => out.push(`<span class="g">#${esc(x)}</span>`));
+  (p.traits || []).forEach(x => out.push(`<span class="g">${esc(x)}</span>`));
+  if (withCond) (p.conditional || []).forEach(c => out.push(`<span class="dim">if ${esc(explainInline(c.if))}: </span>` + fxHtml(c.apply)));
+  return out.join("");
+}
+function explainInline(expr) {
+  const r = evalExpr(expr, { attrs: {}, rank: () => 0, total: () => 0, tags: new Set(), assoc: new Set(), knowledge: new Set(), equipment: new Set(), aug: new Set(), events: new Set(), species: null, history: {}, level: 1, hasNode: () => false });
+  return r.lines.map(l => l.text).join(" ").replace(/ \(current[^)]*\)/g, "");
+}
+function explainHtml(res) {
+  if (!res || !res.lines.length) return `<div class="ln ok"><span class="m">✓</span><span>No requirement</span></div>`;
+  return res.lines.map(l => `<div class="ln ${l.group ? "grp" : l.ok ? "ok" : "no"}" style="padding-left:${l.indent * 14}px">
+    <span class="m">${l.group ? "▸" : l.ok ? "✓" : "✗"}</span><span>${esc(l.text)}</span></div>`).join("");
+}
+
+/* =====================================================================
+   UI — top bar, tabs, render root
+   ===================================================================== */
+const TABS = [
+  { id: "web", i: "✺", n: "Web" }, { id: "sheet", i: "▣", n: "Sheet" }, { id: "skills", i: "◎", n: "Skills" },
+  { id: "state", i: "◈", n: "State" }, { id: "plan", i: "⟁", n: "Plan" }, { id: "dev", i: "⚠", n: "Dev", dev: true }
+];
+function renderTop() {
+  const tb = $("#topbar");
+  if (App.screen === "library") { tb.innerHTML = `<span class="brand">BUILDWRIGHT</span><span class="who dim small">v0.1 · offline playtest sandbox</span>`; return; }
+  const ch = active();
+  if (App.screen !== "main") {
+    tb.innerHTML = `<button class="iconbtn" data-act="goLibrary" aria-label="Library">☰</button><span class="brand">LIFEPATH</span>
+      <span class="who">${esc(ch.name || "New character")}</span><span class="badge">DRAFT</span>`; return;
+  }
+  const D = deriveCharacter(ch);
+  tb.innerHTML = `<button class="iconbtn" data-act="goLibrary" aria-label="Library">☰</button>
+    <div class="who">${esc(ch.name || "Unnamed")}<div class="tiny dim mono">LV ${ch.level}</div></div>
+    <span class="badge wp ${D.wp.banked < 0 ? "neg" : ""}" title="Web Points banked">${D.wp.banked} WP</span>
+    ${isPlanning() ? `<span class="badge plan">PLANNING</span>` : `<span class="badge live">● LIVE</span>`}
+    ${isPlanning() ? "" : `<button class="iconbtn" data-act="saveNow" aria-label="Save">⤓</button>`}`;
+}
+function renderBanner() {
+  const b = $("#banner");
+  if (App.screen === "main" && isPlanning()) {
+    b.innerHTML = `<div class="planbar"><span class="grow">⟁ PLANNING MODE — hypothetical. Live character untouched.</span>
+      <button class="btn sm warn" data-act="planReset">Reset</button><button class="btn sm" data-act="planExit">Return to Live</button></div>`;
+  } else b.innerHTML = "";
+}
+function renderTabs() {
+  const t = $("#tabs");
+  if (App.screen !== "main") { t.style.display = "none"; return; }
+  t.style.display = "";
+  t.innerHTML = TABS.map(x => `<button class="${App.tab === x.id ? "on" : ""} ${x.dev ? "dev" : ""}" data-act="tab" data-tab="${x.id}"><span class="i">${x.i}</span>${x.n}</button>`).join("");
+}
+function render() {
+  const v = $("#view");
+  const key = App.screen + ":" + App.tab + ":" + App.lpStage;
+  const keepScroll = v.dataset.key === key ? v.scrollTop : 0;
+  renderTop(); renderBanner(); renderTabs();
+  v.classList.toggle("webmode", App.screen === "main" && App.tab === "web");
+  if (App.screen === "library") v.innerHTML = renderLibrary();
+  else if (App.screen === "lifepath") v.innerHTML = renderLifepath();
+  else if (App.screen === "review") { v.innerHTML = renderReview(); mountWeb($("#reviewWeb"), active(), { mini: true }); }
+  else if (App.screen === "main") {
+    if (App.tab === "web") { v.innerHTML = renderWebTab(); mountWeb($("#webwrap"), active(), {}); }
+    else if (App.tab === "sheet") v.innerHTML = renderSheet();
+    else if (App.tab === "skills") v.innerHTML = renderSkills();
+    else if (App.tab === "state") v.innerHTML = renderState();
+    else if (App.tab === "plan") v.innerHTML = renderPlan();
+    else if (App.tab === "dev") v.innerHTML = renderDev();
+  }
+  v.dataset.key = key; v.scrollTop = keepScroll;
+  const on = v.querySelector(".stepper .on"); if (on) on.scrollIntoView({ block: "nearest", inline: "center" });
+  if ($("#sheet").classList.contains("open") && App.selected) renderInspector();
+}
+
+/* =====================================================================
+   UI — Character Library
+   ===================================================================== */
+function renderLibrary() {
+  const chars = Object.values(App.store.characters).sort((a, b) => b.updated - a.updated);
+  const storageNote = Storage_.ok ? `<span class="good">Browser storage active.</span> Still export backups — clearing browser data erases it.`
+    : `<span class="warn">Browser storage unavailable in this context.</span> Characters live only until this tab closes — export JSON to keep them.`;
+  return `<div class="page">
+    <div class="card" style="border-color:var(--line2)">
+      <div class="mono" style="letter-spacing:.3em;color:var(--accent);font-weight:700">BUILDWRIGHT</div>
+      <div class="dim small">v0.1 · private offline playtest sandbox · classless lifepath + personal Web for Aegis</div>
+      <div class="small" style="margin-top:8px">${storageNote}</div>
+    </div>
+    <div class="row" style="margin-bottom:12px"><button class="btn primary grow" data-act="newChar">＋ New Character</button>
+      <button class="btn grow" data-act="importChar">Import Character</button></div>
+    <h3>Characters</h3>
+    ${chars.length ? chars.map(c => {
+      const sp = c.history.species ? labelFor("species", c.history.species) : "—";
+      return `<div class="card"><div class="row nowrap"><div class="grow"><div style="font-weight:700;font-size:16px">${esc(c.name || "Unnamed")}</div>
+        <div class="dim small">${esc(sp)} · Level ${c.level} · ${c.history.finalized ? `<span class="good">Live</span>` : `<span class="warn">Lifepath draft</span>`}
+        · ${new Date(c.updated).toLocaleString()}</div></div>
+        <button class="btn primary" data-act="openChar" data-id="${c.id}">Open</button></div>
+        <div class="row" style="margin-top:8px"><button class="btn sm" data-act="dupChar" data-id="${c.id}">Duplicate</button>
+        <button class="btn sm" data-act="exportChar" data-id="${c.id}">Export</button>
+        <button class="btn sm danger" data-act="delChar" data-id="${c.id}">Delete</button></div></div>`;
+    }).join("") : `<div class="muted-box dim">No characters yet. Create one — or import a JSON export.</div>`}
+    <h3 style="margin-top:18px">Backups</h3>
+    <div class="card"><div class="row"><button class="btn grow" data-act="exportBackup">Export Complete Backup</button>
+      <button class="btn grow" data-act="importBackup">Import Complete Backup</button></div>
+      <div class="dim small" style="margin-top:8px">A backup contains every character plus your current configuration (Web Point bands, mastery thresholds, node price edits…).</div>
+      <button class="btn danger block" style="margin-top:10px" data-act="resetPrototype">Reset Prototype</button></div>
+  </div>`;
+}
+
+/* =====================================================================
+   UI — Lifepath Creator
+   ===================================================================== */
+function renderLifepath() {
+  const ch = active();
+  const lp = buildLifepath(ch.history);
+  const stIdx = App.lpStage; const st = LIFEPATH_STAGES[stIdx];
+  const sp = ch.history.species ? SPECIES_BY_ID[ch.history.species] : null;
+  const stepper = LIFEPATH_STAGES.map((s, i) => `<button class="${i === stIdx ? "on" : ""} ${s.id !== "final" && ch.history[s.id] ? "done" : ""}"
+     data-act="lpGo" data-i="${i}">${i + 1}. ${esc(s.name)}</button>`).join("");
+  let body = "";
+  if (ch.history.finalized) body += `<div class="dangerbox small" style="margin-bottom:10px"><b>Developer override:</b> editing a finalized history. Purchased nodes and skill progress are kept; derived stats will rebuild.</div>`;
+  if (App.lastInvalid.length) body += `<div class="warnbox small" style="margin-bottom:10px">Your change invalidated later choices: ${App.lastInvalid.map(x => `<b>${esc(LIFEPATH_STAGES.find(s => s.id === x.stage).name)}</b> (${esc(x.stage === "species" ? labelFor("species", x.id) : lifepathName(x.stage, x.id))})`).join(", ")}. Pick again.</div>`;
+  if (st.id !== "final") {
+    const stage = lp.stages[stIdx];
+    const ages = sp && st.ageKey ? `<span class="chip">${esc(sp.name)} ${st.ageKey}: ${esc(sp.ages[st.ageKey])}</span>` : "";
+    body += `<h2>${esc(st.name)} ${ages}</h2>`;
+    if (!stage || (stIdx > 0 && !lp.stages[stIdx - 1].chosen && !ch.history[LIFEPATH_STAGES[stIdx - 1].id])) body += `<div class="muted-box dim">Choose the previous stage first.</div>`;
+    else body += stage.options.map(o => {
+      const sel = ch.history[st.id] === o.opt.id;
+      const fx = st.id === "species" ? fxHtml({ attrs: o.opt.attrs, traits: o.opt.traits }) + (o.opt.flex ? `<span class="a">+${o.opt.flex} flexible pt</span>` : "") : fxHtml(o.opt, true);
+      return `<button class="opt ${sel ? "sel" : ""} ${o.available ? "" : "na"}" data-act="${o.available ? "lpPick" : "lpNA"}" data-stage="${st.id}" data-id="${o.opt.id}">
+        <div class="t">${sel ? "◉ " : ""}${esc(o.opt.name)} ${o.opt.status === "TEST" || /TEST|placeholder/i.test(o.opt.name) ? `<span class="chip test">TEST</span>` : ""}</div>
+        <div class="d">${esc(o.opt.desc)}</div><div class="fx">${fx}</div>
+        ${o.available ? "" : `<div class="explain small" style="margin-top:6px"><div class="dim tiny">UNAVAILABLE — requires:</div>${explainHtml(o.res)}</div>`}
+      </button>`;
+    }).join("");
+  } else body += renderLifepathFinal(ch, lp);
+
+  const d = lp.draft; const flex = ch.history.flex;
+  const attrsHtml = ATTRS.map(a => { const v = d.attrs[a] + (flex[a] || 0); return `<div class="attr"><div class="n">${a}</div><div class="s">${v}</div><div class="m">${signed(attrMod(v))}</div></div>`; }).join("");
+  const sk = Object.entries(d.skills).filter(([, v]) => v).sort((a, b) => b[1] - a[1]);
+  const hist = LIFEPATH_STAGES.filter(s => s.id !== "final").map(s => `<div class="row small"><span class="dim" style="width:130px">${esc(s.name)}</span><b>${ch.history[s.id] ? esc(s.id === "species" ? labelFor("species", ch.history[s.id]) : lifepathName(s.id, ch.history[s.id])) : "—"}</b></div>`).join("");
+  const stats = `<details class="card" open><summary>Current statistics</summary>
+    <div class="attrs" style="margin:8px 0">${attrsHtml}</div>
+    <div class="fx">${sk.map(([s, v]) => `<span class="s">${esc(s)} ${v} · ${tierOf(v)}</span>`).join("") || `<span class="dim">No skills yet</span>`}</div>
+    <div class="fx" style="margin-top:6px">${fxHtml({ assoc: [...d.assoc], knowledge: [...d.knowledge], equipment: [...d.equipment], events: [...d.events], tags: [...d.tags] })}</div>
+    </details><details class="card"><summary>Decision history</summary>${hist}</details>`;
+  const last = stIdx === LIFEPATH_STAGES.length - 1;
+  return `<div class="page" style="padding-bottom:20px"><div class="stepper">${stepper}</div>${body}${stats}</div>
+    <div class="lpnav"><button class="btn" data-act="lpBack" ${stIdx === 0 ? "disabled" : ""}>← Back</button>
+    ${last ? `<button class="btn primary" data-act="lpReview">Review Character →</button>` : `<button class="btn primary" data-act="lpNext">Next →</button>`}</div>`;
+}
+function renderLifepathFinal(ch, lp) {
+  const flexTotal = lp.draft.flex; const used = ATTRS.reduce((s, a) => s + (ch.history.flex[a] || 0), 0);
+  const lvl = ch.history.startingLevel || 1;
+  return `<h2>Finishing Touches</h2>
+    <div class="card"><label class="field"><span>Name</span><input type="text" data-chg="lpName" value="${esc(ch.name)}" placeholder="Character name"></label>
+    <label class="field"><span>Age / developmental note (free text — species mature at different rates)</span><input type="text" data-chg="lpAge" value="${esc(ch.history.age)}" placeholder="e.g. 27, early adulthood"></label>
+    ${ch.history.finalized ? "" : `<label class="field"><span>Starting level (1–${CONFIG.levelCap}) — replacement or high-level start</span>
+      <div class="row"><input type="number" min="1" max="${CONFIG.levelCap}" data-chg="lpLevel" value="${lvl}">
+      <span class="dim small">Web Point budget: <b class="mono">${wpEarnedAtLevel(lvl)}</b></span></div></label>`}</div>
+    <div class="card"><h3>Flexible attribute points — ${flexTotal - used} of ${flexTotal} left</h3>
+    <div class="dim small" style="margin-bottom:8px">PLAYTEST VALUE (CONFIG.flexibleAttributePoints + species bonus). Over-spending is allowed; it shows red.</div>
+    ${ATTRS.map(a => `<div class="row nowrap" style="margin:6px 0"><span class="mono" style="width:44px">${a}</span>
+      <button class="stepbtn" data-act="lpFlex" data-a="${a}" data-d="-1">−</button><span class="mono" style="width:40px;text-align:center">${signed(ch.history.flex[a] || 0)}</span>
+      <button class="stepbtn" data-act="lpFlex" data-a="${a}" data-d="1">+</button><span class="dim small">→ ${lp.draft.attrs[a] + (ch.history.flex[a] || 0)}</span></div>`).join("")}
+    ${used > flexTotal ? `<div class="bad small">Over budget by ${used - flexTotal}.</div>` : ""}</div>`;
+}
+
+/* =====================================================================
+   UI — Final Character Review
+   ===================================================================== */
+function renderReview() {
+  const ch = active(); const D = deriveCharacter(ch);
+  const lvl = ch.history.finalized ? ch.level : (ch.history.startingLevel || 1);
+  const missing = LIFEPATH_STAGES.filter(s => s.id !== "final" && !ch.history[s.id]);
+  const skills = SKILLS.filter(s => D.skills[s.id].rank > 0).map(s => `<tr><td>${esc(s.id)}</td><td class="mono">${signed(D.skills[s.id].total)}</td><td><span class="tier tier-${D.skills[s.id].tier}">${D.skills[s.id].tier}</span></td></tr>`).join("");
+  return `<div class="page">
+    <h2>Final Character Review</h2>
+    ${missing.length ? `<div class="dangerbox" style="margin-bottom:12px">Unfinished stages: ${missing.map(m => esc(m.name)).join(", ")}. You can still create the character (the app doesn't police you), but it will be incomplete.</div>` : ""}
+    <div class="card"><div style="font-size:19px;font-weight:700">${esc(ch.name || "Unnamed")}</div>
+      <div class="dim">${esc(labelFor("species", ch.history.species) || "No species")} · ${esc(ch.history.age || "age unspecified")} · Level ${lvl} · <b class="mono">${wpEarnedAtLevel(lvl) + Number(ch.bonusWP || 0)}</b> Web Points to spend</div>
+      <div style="margin-top:8px">${LIFEPATH_STAGES.filter(s => s.id !== "final" && s.id !== "species").map(s => `<span class="chip">${esc(s.name)}: ${esc(lifepathName(s.id, ch.history[s.id]) || "—")}</span>`).join("")}</div></div>
+    <div class="card"><h3>Attributes</h3><div class="attrs">${ATTRS.map(a => `<div class="attr"><div class="n">${a}</div><div class="s">${D.attrs[a]}</div><div class="m">${signed(D.mods[a])}</div></div>`).join("")}</div></div>
+    <div class="card"><h3>Skills & mastery</h3><table class="t"><tr><th>Skill</th><th>Mod</th><th>Mastery</th></tr>${skills || `<tr><td class="dim" colspan="3">None</td></tr>`}</table></div>
+    <div class="card"><h3>Traits · knowledge · associations · equipment</h3><div class="fx">${fxHtml({ traits: D.traits, assoc: [...D.assoc], knowledge: [...D.knowledge], equipment: [...D.equipment], events: [...D.events], tags: [...D.tags] })}</div></div>
+    <div class="card"><h3>Starting Web</h3><div class="dim small" style="margin-bottom:6px">Foundation at the center, ten domain directions, entry nodes, one readable layer, fog beyond. Tap to inspect.</div>
+      <div class="minimap" id="reviewWeb"></div></div>
+    <div class="warnbox"><div style="font-weight:800;letter-spacing:.08em">FINALIZE CHARACTER HISTORY</div>
+      <p class="small">Your species, origin, upbringing, education, formative experiences, and other Lifepath decisions become permanent when this character is created.</p>
+      <p class="small">These decisions may affect your attributes, skills, knowledge, opportunities, and Web throughout the character's life.</p>
+      <p class="small" style="margin-bottom:0">Review your character before continuing.</p></div>
+    <div class="row" style="margin-top:12px"><button class="btn grow" data-act="reviewBack">← Back to Lifepath</button>
+      <button class="btn primary grow" data-act="createChar">${ch.history.finalized ? "RE-FINALIZE HISTORY" : "CREATE CHARACTER"}</button></div>
+  </div>`;
+}
+
+/* =====================================================================
+   UI — Character Dashboard (Sheet)
+   ===================================================================== */
+function manKey(m) { return (m.source ? m.source.id : "x") + ":" + m.name; }
+function renderSheet() {
+  const ch = active(); const D = deriveCharacter(ch);
+  const hist = LIFEPATH_STAGES.filter(s => s.id !== "final").map(s => `<span class="chip">${esc(s.name)}: <b>${esc(s.id === "species" ? labelFor("species", ch.history[s.id]) : lifepathName(s.id, ch.history[s.id]) || "—")}</b></span>`).join("");
+  const pinned = D.maneuvers.filter(m => ch.pinned.includes(manKey(m)));
+  const owned = Object.keys(ch.owned).map(id => NODE_BY_ID[id]).filter(Boolean);
+  const byDom = {}; owned.forEach(n => (byDom[n.domains[0]] = byDom[n.domains[0]] || []).push(n));
+  return `<div class="page">
+    <div class="card"><div class="row nowrap"><div class="grow"><input type="text" data-chg="charName" value="${esc(ch.name)}" style="font-weight:700;font-size:17px"></div></div>
+      <div class="dim small" style="margin-top:6px">${esc(labelFor("species", ch.history.species))} · ${esc(ch.history.age || "")}</div>
+      <div class="row" style="margin-top:10px"><span class="dim">Level</span>
+        <button class="stepbtn" data-act="level" data-d="-1">−</button><span class="mono" style="font-size:22px;font-weight:700;min-width:36px;text-align:center">${ch.level}</span>
+        <button class="stepbtn" data-act="level" data-d="1">+</button><span class="dim small">milestone · cap ${CONFIG.levelCap}${ch.level < CONFIG.levelCap ? ` · next level +${perLevelWP(ch.level + 1)} WP` : ""}</span></div></div>
+    <div class="card"><h3>Web Points</h3><div class="kv">
+      <div><div class="k">Earned</div><div class="v">${D.wp.earned}</div></div>
+      <div><div class="k">Spent</div><div class="v">${D.wp.spent}</div></div>
+      <div><div class="k">Banked</div><div class="v ${D.wp.banked < 0 ? "bad" : "good"}">${D.wp.banked}</div></div></div>
+      ${ch.bonusWP ? `<div class="dim small" style="margin-top:6px">Includes ${ch.bonusWP} DM-granted bonus points.</div>` : ""}</div>
+    <div class="card"><h3>Attributes</h3><div class="attrs">${ATTRS.map(a => `<div class="attr"><div class="n">${a}</div><div class="s">${D.attrs[a]}</div><div class="m">${signed(D.mods[a])}</div></div>`).join("")}</div>
+      <div class="kv" style="margin-top:8px"><div><div class="k">HP (test)</div><div class="v">${D.hp}</div></div><div><div class="k">AC (test)</div><div class="v">${D.ac}</div></div>
+      <div><div class="k">Initiative</div><div class="v">${signed(D.init)}</div></div><div><div class="k">Speed</div><div class="v">${D.speed} ft</div></div></div></div>
+    <div class="card"><h3>Quick Repertoire</h3>${pinned.length ? pinned.map(m => manRow(ch, m)).join("") : `<div class="dim small">Pin maneuvers below to build a quick repertoire. Unpinned maneuvers are still known.</div>`}</div>
+    <div class="card"><h3>Maneuvers & techniques (${D.maneuvers.length})</h3>
+      <div class="row" style="margin-bottom:6px"><input type="search" placeholder="Search maneuvers…" value="${esc(App.man.q)}" data-inp="manQ" class="grow" style="flex:1 1 160px">
+      <select data-chg="manDom" style="width:auto"><option value="">All domains</option>${DOMAINS.map(d => `<option ${App.man.domain === d.id ? "selected" : ""}>${d.id}</option>`).join("")}</select>
+      <select data-chg="manKind" style="width:auto"><option value="">All types</option><option value="maneuver" ${App.man.kind === "maneuver" ? "selected" : ""}>Maneuvers</option><option value="ability" ${App.man.kind === "ability" ? "selected" : ""}>Mastery abilities</option><option value="under" ${App.man.kind === "under" ? "selected" : ""}>Underqualified</option></select>
+      <button class="btn sm ${App.man.favOnly ? "primary" : ""}" data-act="manFav">★ only</button></div>
+      <div id="manList">${manListHtml(ch, D)}</div></div>
+    <div class="card"><h3>Owned nodes (${owned.length})</h3>${owned.length ? DOMAINS.filter(d => byDom[d.id]).map(d => `<div style="margin:6px 0"><span class="domdot" style="background:${d.color}"></span><b class="small">${d.id}</b>
+      <div>${byDom[d.id].map(n => `<button class="chip" data-act="openNode" data-id="${n.id}">${esc(n.name)}${D.operational[n.id] && !D.operational[n.id].ok ? " ⊘" : ""}${isPlanning() && !live().owned[n.id] ? " (plan)" : ""}</button>`).join("")}</div></div>`).join("") : `<div class="dim small">Nothing yet — spend Web Points in the Web tab.</div>`}</div>
+    <div class="card"><h3>Equipment & associations</h3><div class="fx">${fxHtml({ equipment: [...D.equipment], assoc: [...D.assoc], knowledge: [...D.knowledge] })}${[...D.aug].map(a => `<span class="q">⌁ ${esc(labelFor("a", a))}</span>`).join("")}</div>
+      <div class="dim small" style="margin-top:6px">Edit these in the State tab.</div></div>
+    <div class="card"><h3>Foundational history <span class="chip">read-only</span></h3>${hist}<div class="fx" style="margin-top:6px">${fxHtml({ traits: D.traits })}</div></div>
+    <div class="card"><h3>Recent changes</h3>${ch.log.slice(0, 12).map(l => `<div class="small" style="padding:4px 0;border-top:1px solid var(--line)"><span class="faint mono tiny">${new Date(l.t).toLocaleTimeString()}</span> ${esc(l.msg)}</div>`).join("") || `<div class="dim small">No changes yet.</div>`}</div>
+    ${isPlanning() ? "" : `<div class="row"><button class="btn grow" data-act="saveNow">Save Character</button><button class="btn grow" data-act="exportChar" data-id="${ch.id}">Export Character</button></div>`}
+  </div>`;
+}
+function manRow(ch, m) {
+  const k = manKey(m); const fav = ch.favorites.includes(k), pin = ch.pinned.includes(k);
+  const dom = m.source ? m.source.domains[0] : "";
+  return `<div class="man"><div class="row nowrap"><div class="grow"><b>${esc(m.name)}</b> ${m.active ? "" : `<span class="chip bad">inactive</span>`}
+      ${m.masteryReq ? `<span class="chip ${m.qualified ? "" : "warn"}">${esc(m.masteryReq.tier)} ${esc(m.masteryReq.skill)}${m.qualified ? " ✓" : " ✗"}</span>` : ""}
+      <div class="tiny dim"><span class="domdot" style="background:${(DOMAIN_BY_ID[dom] || {}).color}"></span>${esc(m.source ? m.source.name : "")}</div></div>
+      <button class="star" data-act="manStar" data-k="${esc(k)}" title="Favorite">${fav ? "★" : "☆"}</button>
+      <button class="star" data-act="manPin" data-k="${esc(k)}" title="Pin to Quick Repertoire" style="${pin ? "" : "opacity:.35"}">📌</button></div>
+    <div class="small">${esc(m.desc || "")}</div>
+    ${m.masteryReq && !m.qualified ? `<div class="small warn">Underqualified — usable at reduced effectiveness: ${esc(CONFIG.underqualifiedPenalty)}</div>` : ""}</div>`;
+}
+function manListHtml(ch, D) {
+  const q = App.man.q.toLowerCase();
+  const list = D.maneuvers.filter(m => {
+    if (q && !(m.name + " " + (m.desc || "") + " " + (m.source ? m.source.name : "")).toLowerCase().includes(q)) return false;
+    if (App.man.domain && !(m.source && m.source.domains.includes(App.man.domain))) return false;
+    if (App.man.kind === "maneuver" && m.isAbility) return false;
+    if (App.man.kind === "ability" && !m.isAbility) return false;
+    if (App.man.kind === "under" && m.qualified) return false;
+    if (App.man.favOnly && !ch.favorites.includes(manKey(m))) return false;
+    return true;
+  });
+  return list.length ? list.map(m => manRow(ch, m)).join("") : `<div class="dim small">None match. (Maneuvers come from MIGHT styles, maneuver nodes and other purchases.)</div>`;
+}
+
+/* =====================================================================
+   UI — Skills
+   ===================================================================== */
+function renderSkills() {
+  const ch = active(); const D = deriveCharacter(ch);
+  return `<div class="page">
+    <div class="card"><div class="row nowrap"><div class="grow small dim">Succeed on a meaningful check → DM may award <b>1 Progress Mark</b>. Max ${CONFIG.maxMarksBetweenLongRests} per skill between long rests.
+      ${CONFIG.progressMarksPerIncrease} marks → +${CONFIG.skillIncreasePerFill} skill. Displayed modifier already includes the governing attribute — roll d20 + it.</div></div>
+      <button class="btn block good" style="margin-top:8px" data-act="longRest">☾ Long Rest — reset mark eligibility</button>
+      <div class="row nowrap" style="margin-top:8px"><input type="search" placeholder="Filter skills…" value="${esc(App.skillQ || "")}" data-inp="skillQ">
+      <button class="btn sm ${App.skillTrained ? "primary" : ""}" data-act="skillTrained">Ranked only</button></div></div>
+    <div id="skillList">${skillListHtml(ch, D)}</div></div>`;
+}
+function skillListHtml(ch, D) {
+  const q = (App.skillQ || "").toLowerCase();
+  const list = SKILLS.filter(s => (!q || s.id.toLowerCase().includes(q)) && (!App.skillTrained || D.skills[s.id].rank > 0));
+  return list.map(s => {
+      const k = D.skills[s.id]; const nt = nextTier(CONFIG.masteryBasis === "total" ? k.total : k.rank);
+      const locked = s.unlock && !k.unlock.ok;
+      return `<div class="card" style="padding:10px 12px"><div class="sk">
+        <div><span class="nm">${esc(s.id)}</span> <span class="dim small mono">(${s.attr})</span> <span class="tier tier-${k.tier}">${k.tier}</span>
+          ${locked ? `<span class="chip warn">locked</span>` : ""}${k.rank >= CONFIG.skillSoftCap ? `<span class="chip warn">≥ soft cap</span>` : ""}</div>
+        <div class="tot">${signed(k.total)}</div></div>
+        <div class="tiny dim mono">rank ${k.rank} (lifepath ${k.lifepath}${k.rank - k.lifepath ? `, ${signed(k.rank - k.lifepath)} play` : ""}) ${CONFIG.includeAttributeModInSkill ? `+ ${s.attr} ${signed(D.mods[s.attr])}` : ""}${k.bonus ? ` + nodes ${signed(k.bonus)}` : ""}
+          · ${nt ? `${nt.name} at ${nt.min}` : "top tier"} · progress DC ≥ ${CONFIG.progressDCByTier[k.tier] || "?"}</div>
+        ${locked ? `<div class="tiny warn">${esc(s.note || "")}</div>` : ""}
+        <div class="marks">${Array.from({ length: CONFIG.progressMarksPerIncrease }, (_, i) => `<i class="${i < k.marks ? "on" : ""}"></i>`).join("")}</div>
+        <div class="row nowrap"><span class="small dim grow">Marks ${k.marks}/${CONFIG.progressMarksPerIncrease}${k.markedSinceRest ? ` · <span class="warn">marked since rest</span>` : ""}</span>
+          <button class="stepbtn" data-act="mark" data-s="${esc(s.id)}" data-d="-1" title="Remove mark">−</button>
+          <button class="btn sm primary" data-act="mark" data-s="${esc(s.id)}" data-d="1">+ Mark</button>
+          <span class="faint">|</span><span class="tiny dim">rank</span>
+          <button class="stepbtn" data-act="rank" data-s="${esc(s.id)}" data-d="-1">−</button><button class="stepbtn" data-act="rank" data-s="${esc(s.id)}" data-d="1">+</button></div>
+      </div>`;
+    }).join("") || `<div class="dim small">No skills match.</div>`;
+}
+
+/* =====================================================================
+   UI — Character State / Access
+   ===================================================================== */
+function renderState() {
+  const ch = active(); const D = deriveCharacter(ch); const lp = D.lp.draft; const removed = new Set(ch.state.removed);
+  const section = (title, kind, stateKey, catalog, current, lpSet) => {
+    const all = new Set([...lpSet, ...ch.state[stateKey]]);
+    const chips = [...all].map(id => {
+      const sup = removed.has(kind + ":" + id); const fromLp = lpSet.has(id);
+      return `<span class="chip x ${sup ? "sup" : ""}">${esc(labelFor(kind, id))}${fromLp ? ` <span class="tiny dim">lifepath</span>` : ""}
+        ${sup ? `<button data-act="stRestore" data-kind="${kind}" data-id="${id}" title="Restore">↺</button>` : `<button data-act="stRemove" data-kind="${kind}" data-key="${stateKey}" data-id="${id}" title="Remove">✕</button>`}</span>`;
+    }).join("");
+    const opts = catalog.filter(c => !current.has(c.id)).map(c => `<option value="${c.id}">${esc(c.name)}${c.cat ? " — " + esc(c.cat) : ""}</option>`).join("");
+    return `<div class="card"><h3>${title}</h3><div>${chips || `<span class="dim small">None</span>`}</div>
+      <div class="row nowrap" style="margin-top:8px"><select id="add_${stateKey}"><option value="">Add…</option>${opts}</select>
+      <button class="btn" data-act="stAdd" data-key="${stateKey}">Add</button></div></div>`;
+  };
+  return `<div class="page">
+    <div class="dim small" style="margin-bottom:10px">Things acquired after Lifepath. The DM says "add this event" or "mark Aegis familiarity" — you do it here. Every change re-evaluates your Web and logs what happened. Removing an access condition keeps purchased nodes.</div>
+    ${section("Story events", "event", "events", EVENTS, D.events, lp.events)}
+    ${section("Factions · citizenship · associations · teachers", "assoc", "associations", ACCESS.associations, D.assoc, lp.assoc)}
+    ${section("Knowledge · manuals · databases · captured tech", "knowledge", "knowledge", ACCESS.knowledge, D.knowledge, lp.knowledge)}
+    ${section("Equipment & assets", "equip", "equipment", ACCESS.equipment, D.equipment, lp.equipment)}
+    ${section("Augmentations", "aug", "augmentations", ACCESS.augmentations, D.aug, lp.aug)}
+    <div class="card"><h3>Custom tags</h3><div class="dim small">Free-form flags (e.g. <span class="mono">survivor</span>, <span class="mono">spacer</span>, <span class="mono">para_exposure_2</span>). Node conditions can test for them.</div>
+      <div style="margin:6px 0">${ch.state.tags.map(t => `<span class="chip x">#${esc(t)}<button data-act="tagRemove" data-t="${esc(t)}">✕</button></span>`).join("") || `<span class="dim small">None</span>`}</div>
+      <div class="row nowrap"><input type="text" id="tagInput" placeholder="tag_name"><button class="btn" data-act="tagAdd">Add</button></div>
+      <div class="tiny dim" style="margin-top:8px">All active tags: ${[...D.tags].map(t => `<span class="mono">#${esc(t)}</span>`).join(" ")}</div></div>
+    ${ch.state.events.length || lp.events.size ? `<div class="card"><h3>Event notes</h3>${[...D.events].map(e => `<div class="small" style="margin:4px 0"><b>${esc(labelFor("event", e))}</b> — <span class="dim">${esc((EVENT_BY_ID[e] || {}).desc || "")}</span> <span class="tiny faint mono">${((EVENT_BY_ID[e] || {}).grantsTags || []).map(t => "#" + t).join(" ")}</span></div>`).join("")}</div>` : ""}
+  </div>`;
+}
+
+/* =====================================================================
+   PLANNING MODE — UI
+   ===================================================================== */
+function renderPlan() {
+  if (!isPlanning()) return `<div class="page"><div class="card"><h2>Planning / Theorycraft Mode</h2>
+    <p class="dim">Clones your live character into a temporary sandbox. Raise the level, add hypothetical Web Points, events and associations, buy nodes, change skills — then throw it away.</p>
+    <p class="dim small">Planning cannot reveal every future: nodes that only story events create don't exist in your Web until those events happen (unless you add them hypothetically).</p>
+    <button class="btn primary block" data-act="planEnter">⟁ Enter Planning Mode</button></div></div>`;
+  const P = App.planning, L = live(); const DP = deriveCharacter(P), DL = deriveCharacter(L);
+  const hyp = Object.keys(P.owned).filter(id => !L.owned[id]).map(id => NODE_BY_ID[id]);
+  const gone = Object.keys(L.owned).filter(id => !P.owned[id]).map(id => NODE_BY_ID[id]);
+  const skillDiff = SKILLS.filter(s => DP.skills[s.id].rank !== DL.skills[s.id].rank).map(s => `${s.id} ${DL.skills[s.id].rank}→${DP.skills[s.id].rank}`);
+  return `<div class="page">
+    <div class="card" style="border-color:var(--plan)"><h2 class="warn">Hypothetical character</h2>
+      <label class="field"><span>Hypothetical level: <b class="mono">${P.level}</b> (live: ${L.level})</span>
+        <input type="range" min="1" max="${CONFIG.levelCap}" value="${P.level}" data-chg="planLevel" style="width:100%"></label>
+      <div class="row"><span class="dim">Hypothetical bonus WP: <b class="mono">${P.bonusWP}</b></span>
+        <button class="btn sm" data-act="planWP" data-d="5">+5</button><button class="btn sm" data-act="planWP" data-d="25">+25</button><button class="btn sm" data-act="planWP" data-d="-5">−5</button></div>
+      <div class="kv" style="margin-top:10px"><div><div class="k">Plan WP banked</div><div class="v">${DP.wp.banked}</div></div><div><div class="k">Live WP banked</div><div class="v">${DL.wp.banked}</div></div></div></div>
+    <div class="card"><h3>Differences from live</h3>
+      <div class="small"><b>Hypothetical purchases (${hyp.length}):</b> ${hyp.map(n => `<button class="chip" data-act="openNode" data-id="${n.id}">${esc(n.name)}</button>`).join("") || "—"}</div>
+      <div class="small"><b>Refunded in plan:</b> ${gone.map(n => esc(n.name)).join(", ") || "—"}</div>
+      <div class="small"><b>Skills:</b> ${skillDiff.join(", ") || "—"}</div>
+      <div class="small"><b>Added events/associations:</b> ${[...P.state.events.filter(e => !L.state.events.includes(e)), ...P.state.associations.filter(e => !L.state.associations.includes(e))].map(x => esc((EVENT_BY_ID[x] || ACCESS_BY_ID[x] || { name: x }).name)).join(", ") || "—"}</div>
+      <div class="dim small" style="margin-top:6px">Use the Web, Skills and State tabs normally — everything goes to the plan. Hypothetical purchases draw with amber dashes.</div></div>
+    <div class="row"><button class="btn warn grow" data-act="planReset">Reset Planning</button><button class="btn grow" data-act="planExit">Return to Live Character</button></div>
+    <button class="btn danger block" style="margin-top:10px" data-act="planApply">Apply plan to live character…</button>
+  </div>`;
+}
+/* =====================================================================
+   UI — THE WEB (interactive radial graph) + NODE INSPECTOR
+   ===================================================================== */
+function renderWebTab() {
+  return `<div id="webwrap"></div>
+    <div class="webtop"><input type="search" placeholder="Search nodes…" value="${esc(App.filters.search)}" data-inp="webQ">
+      <select data-chg="webDom"><option value="">All domains</option>${DOMAINS.map(d => `<option ${App.filters.domain === d.id ? "selected" : ""}>${d.id}</option>`).join("")}</select>
+      <button class="iconbtn" data-act="legend" title="Legend">?</button></div>
+    ${App.filters.legend ? legendHtml() : ""}
+    <div class="webctl"><button data-act="zoom" data-f="1.3" aria-label="Zoom in">＋</button><button data-act="zoom" data-f="0.77" aria-label="Zoom out">−</button>
+      <button data-act="fit" aria-label="Fit" style="font-size:15px">⤢</button></div>`;
+}
+function legendHtml() {
+  const sw = (fill, stroke, dash, extra) => `<svg viewBox="-10 -10 20 20"><circle r="7" fill="${fill}" stroke="${stroke}" stroke-width="2" ${dash ? `stroke-dasharray="${dash}"` : ""} ${extra || ""}/></svg>`;
+  return `<div class="legend">
+    <div>${sw("#3fd0ff", "#fff")}Purchased</div><div>${sw("#0b1222", "#3fd0ff")}Available</div>
+    <div>${sw("#0b1222", "rgba(63,208,255,.35)")}Visible, locked</div><div>${sw("none", "rgba(160,180,210,.35)", "2 2")}Partially revealed</div>
+    <div>${sw("#0b1222", "#667", "3 2")}Faded (access lost)</div><div>${sw("rgba(63,208,255,.3)", "#ff5f6d", "3 2")}Owned, inactive</div>
+    <div>${sw("rgba(255,181,71,.45)", "#ffb547", "4 2")}Hypothetical (plan)</div>
+    <div class="dim">Size: small · capability · major. ◆ = maneuver. Two-tone = hybrid.</div>
+    <label class="row" style="margin-top:4px"><input type="checkbox" data-chg="showHidden" ${App.filters.showHidden ? "checked" : ""}> Dev: show hidden & absent</label></div>`;
+}
+
+const NODE_R = { entry: 12, small: 7, cap: 9.5, maneuver: 8, style: 11.5, major: 14 };
+function nodeFill(n) { return n.domains.length > 1 ? `url(#g_${n.domains[0]}_${n.domains[1]})` : DOMAIN_BY_ID[n.domains[0]].color; }
+
+function webSvg(ch, opts) {
+  if (!LAYOUT) computeLayout();
+  const D = deriveCharacter(ch); const web = evaluateWeb(ch, D);
+  const liveOwned = isPlanning() ? live().owned : null;
+  const P = LAYOUT.pos; const R = LAYOUT.maxR;
+  const q = (App.filters.search || "").toLowerCase(); const fd = App.filters.domain; const showH = App.filters.showHidden;
+  const drawn = id => { if (id === "root") return true; const s = web[id].state; return VISIBLE_STATES.has(s) || s === "partial" || (showH && (s === "hidden" || s === "absent")); };
+  const dimNode = n => (fd && !n.domains.includes(fd)) || (q && !n.name.toLowerCase().includes(q) && !(n.description || "").toLowerCase().includes(q));
+
+  // defs: hybrid gradients, glow
+  const pairs = new Set(NODES.filter(n => n.domains.length > 1).map(n => n.domains[0] + "_" + n.domains[1]));
+  let defs = `<filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <radialGradient id="bgfog"><stop offset="0" stop-color="#10213d" stop-opacity=".9"/><stop offset=".55" stop-color="#0a1428" stop-opacity=".5"/><stop offset="1" stop-color="#060a13" stop-opacity="0"/></radialGradient>`;
+  pairs.forEach(p => { const [a, b] = p.split("_"); defs += `<linearGradient id="g_${p}" x1="0" y1="0" x2="1" y2="1"><stop offset=".5" stop-color="${DOMAIN_BY_ID[a].color}"/><stop offset=".5" stop-color="${DOMAIN_BY_ID[b].color}"/></linearGradient>`; });
+
+  let drawnR = CONFIG.ringBase + CONFIG.ringSpacing;
+  for (const n of NODES) if (drawn(n.id)) drawnR = Math.max(drawnR, P[n.id].r);
+  const LR = Math.min(R + 62, drawnR + 52); App.labelR = LR;
+  let bg = `<circle r="${R + 120}" fill="url(#bgfog)"/>`;
+  const maxD = Math.max(...Object.values(LAYOUT.depth));
+  for (let d = 1; d <= maxD; d++) bg += `<circle r="${CONFIG.ringBase + (d - 1) * CONFIG.ringSpacing}" fill="none" stroke="#1a2a4a" stroke-width="1" stroke-dasharray="${d % 2 ? "2 6" : "1 3"}"/>`;
+  DOMAINS.forEach((d, i) => {
+    const a = LAYOUT.domAngle(d.id), a2 = a + Math.PI / 10;
+    bg += `<line x1="${Math.cos(a2) * 40}" y1="${Math.sin(a2) * 40}" x2="${Math.cos(a2) * (LR + 10)}" y2="${Math.sin(a2) * (LR + 10)}" stroke="#15223d" stroke-width="1"/>`;
+    const lr = LR, lx = Math.cos(a) * lr, ly = Math.sin(a) * lr;
+    const spent = Object.keys(ch.owned).filter(id => NODE_BY_ID[id] && NODE_BY_ID[id].domains.includes(d.id)).length;
+    bg += `<g class="domlabel" opacity="${fd && fd !== d.id ? .3 : 1}"><text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" fill="${d.color}"
+      style="font:700 15px var(--mono);letter-spacing:.14em">${d.id}</text>
+      <text x="${lx}" y="${ly + 16}" text-anchor="middle" fill="${d.color}" opacity=".55" style="font:10px var(--mono)">${spent ? spent + " owned" : ""}</text></g>`;
+  });
+
+  // edges
+  let edges = "";
+  for (const n of NODES) {
+    if (!drawn(n.id)) continue;
+    for (const p of n.parents) {
+      if (!drawn(p)) continue;
+      const a = P[p], b = P[n.id]; const s1 = web[n.id].state, s0 = p === "root" ? "owned" : web[p].state;
+      const col = DOMAIN_BY_ID[n.domains[0]].color;
+      const both = (s0 === "owned" || s0 === "inactive") && (s1 === "owned" || s1 === "inactive");
+      let st;
+      if (both) st = `stroke="${col}" stroke-width="2.6" stroke-opacity=".9"`;
+      else if (s1 === "available") st = `stroke="${col}" stroke-width="1.6" stroke-opacity=".55"`;
+      else if (s1 === "partial" || s0 === "partial") st = `stroke="#6f84ad" stroke-width="1" stroke-opacity=".22" stroke-dasharray="3 5"`;
+      else if (s1 === "faded") st = `stroke="#667" stroke-width="1" stroke-dasharray="3 3" stroke-opacity=".5"`;
+      else if (s1 === "hidden" || s1 === "absent") st = `stroke="#445" stroke-width=".7" stroke-dasharray="1 4" stroke-opacity=".4"`;
+      else st = `stroke="${col}" stroke-width="1.1" stroke-opacity=".25"`;
+      const op = dimNode(n) ? .15 : 1;
+      edges += `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" ${st} opacity="${op}" ${both ? `filter="url(#glow)"` : ""}/>`;
+    }
+  }
+
+  // nodes
+  let nodes = "";
+  for (const n of NODES) {
+    if (!drawn(n.id)) continue;
+    const r0 = web[n.id]; const s = r0.state; const p = P[n.id]; const rad = NODE_R[n.type] || 9;
+    const col = DOMAIN_BY_ID[n.domains[0]].color; const hyp = liveOwned && (s === "owned" || s === "inactive") && !liveOwned[n.id];
+    const sel = App.selected === n.id;
+    let fill = "#0b1222", stroke = col, sw = 2, dash = "", op = 1, glow = false, label = n.name, lblCls = "lbl", lblFill = "#d7e2f5";
+    if (s === "owned") { fill = nodeFill(n); stroke = "#f2f7ff"; sw = 1.6; glow = true; }
+    if (s === "inactive") { fill = nodeFill(n); op = .55; stroke = "#ff5f6d"; dash = "3 2"; }
+    if (hyp) { stroke = "#ffb547"; dash = "4 2"; sw = 2.4; op = .85; glow = false; }
+    if (s === "available") { sw = 2.6; }
+    if (s === "locked") { stroke = col; sw = 1.5; op = .5; lblFill = "#8b9bb8"; lblCls = "lbl sec"; }
+    if (s === "faded") { stroke = "#6a7088"; dash = "3 2"; op = .5; lblFill = "#6a7088"; lblCls = "lbl sec"; }
+    if (s === "partial") { fill = "none"; stroke = "#9db0d6"; sw = 1; dash = "2 2"; op = .35; label = n.name.slice(0, 3) + "···"; lblFill = "#5a6a88"; lblCls = "lbl sec"; }
+    if (s === "hidden" || s === "absent") { fill = "none"; stroke = s === "absent" ? "#5a4050" : "#40506a"; sw = 1; dash = "1 2"; op = .45; label = (s === "absent" ? "∅ " : "") + n.name; lblFill = "#4a5a78"; lblCls = "lbl sec"; }
+    if (dimNode(n)) op = Math.min(op, .14);
+    const shape = n.type === "maneuver"
+      ? `<rect class="ring" x="${-rad}" y="${-rad}" width="${rad * 2}" height="${rad * 2}" rx="2" transform="rotate(45)" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash ? `stroke-dasharray="${dash}"` : ""}/>`
+      : `<circle class="ring" r="${rad}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash ? `stroke-dasharray="${dash}"` : ""}/>`;
+    const extra = (n.type === "major" ? `<circle r="${rad + 4}" fill="none" stroke="${s === "partial" ? "#9db0d6" : col}" stroke-opacity=".5" stroke-width="1"/>` : "")
+      + (n.type === "style" ? `<circle r="${rad - 4}" fill="none" stroke="${s === "owned" ? "#061020" : col}" stroke-opacity=".7" stroke-width="1"/>` : "")
+      + (n.type === "entry" ? `<circle r="${rad + 4}" fill="none" stroke="${col}" stroke-opacity=".35" stroke-width="1" stroke-dasharray="2 3"/>` : "")
+      + (s === "partial" ? `<text y="3.5" text-anchor="middle" fill="#9db0d6" style="font:700 10px var(--mono)">?</text>` : "")
+      + (s === "inactive" ? `<text y="4" text-anchor="middle" fill="#ff5f6d" style="font:700 11px var(--mono)">⊘</text>` : "")
+      + (s === "owned" && r0.orphan ? `<circle r="${rad + 3}" fill="none" stroke="#ff5f6d" stroke-dasharray="1 2"/>` : "")
+      + (sel ? `<circle r="${rad + 8}" fill="none" stroke="#fff" stroke-width="1.5"><animate attributeName="r" values="${rad + 6};${rad + 10};${rad + 6}" dur="1.4s" repeatCount="indefinite"/></circle>` : "")
+      + (q && !dimNode(n) ? `<circle r="${rad + 6}" fill="none" stroke="#fff" stroke-opacity=".8"/>` : "");
+    nodes += `<g class="n n-${s}" data-node="${n.id}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})" opacity="${op}" ${glow ? `filter="url(#glow)"` : ""}>
+      <circle r="${Math.max(rad + 8, 18)}" fill="transparent"/>${shape}${extra}
+      <text class="${lblCls}" y="${rad + 12}" text-anchor="middle" fill="${lblFill}" style="font:600 10.5px var(--sans);paint-order:stroke" stroke="#060a13" stroke-width="3">${esc(label)}</text>
+      ${s === "available" || s === "owned" ? `<text class="lbl sec" y="${-rad - 5}" text-anchor="middle" fill="${col}" style="font:700 8.5px var(--mono)" opacity=".8">${s === "owned" ? "" : nodeCost(n)}</text>` : ""}</g>`;
+  }
+  const initials = (ch.name || "?").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const center = `<g data-node="root"><circle r="30" fill="#0b1830" stroke="#3fd0ff" stroke-width="1.5" filter="url(#glow)"/>
+    <circle r="36" fill="none" stroke="#3fd0ff" stroke-opacity=".25" stroke-dasharray="2 4"/>
+    <text y="5" text-anchor="middle" fill="#bfefff" style="font:700 15px var(--mono)">${esc(initials)}</text>
+    <text y="50" text-anchor="middle" fill="#8ae8ff" style="font:600 10px var(--mono);letter-spacing:.12em" class="lbl">${esc((labelFor("species", ch.history.species) || "").toUpperCase().slice(0, 24))}</text></g>`;
+  return `<defs>${defs}</defs><g class="vp">${bg}${edges}${nodes}${center}</g>`;
+}
+
+function fitView(el) {
+  const w = el.clientWidth || 360, h = el.clientHeight || 500; const LR = App.labelR || ((LAYOUT || computeLayout()).maxR + 62);
+  const top = el.id === "webwrap" ? 56 : 0;
+  const k = Math.min(w / (2 * (LR + 62)), (h - top) / (2 * (LR + 26)));
+  return { x: w / 2, y: top + (h - top) / 2, k };
+}
+function mountWeb(container, ch, opts) {
+  if (!container) return;
+  const mini = opts && opts.mini;
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  container.innerHTML = ""; container.appendChild(svg);
+  svg.innerHTML = webSvg(ch, opts);
+  let view = mini ? (container._view || null) : App.view;
+  if (!view || !isFinite(view.k)) view = fitView(container);
+  const vp = svg.querySelector(".vp");
+  const apply = () => { vp.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`); svg.classList.toggle("lowzoom", view.k < .45);
+    if (mini) container._view = view; else App.view = view; };
+  apply();
+  const zoomAt = (sx, sy, f) => { const wx = (sx - view.x) / view.k, wy = (sy - view.y) / view.k; view.k = Math.max(.15, Math.min(5, view.k * f)); view.x = sx - wx * view.k; view.y = sy - wy * view.k; apply(); };
+  container._zoom = f => zoomAt(container.clientWidth / 2, container.clientHeight / 2, f);
+  container._fit = () => { view = fitView(container); apply(); };
+  const pts = new Map(); let moved = false, startTarget = null, last = null, pinch = null, start = null;
+  const rel = e => { const b = svg.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
+  svg.addEventListener("pointerdown", e => {
+    pts.set(e.pointerId, rel(e)); svg.setPointerCapture(e.pointerId);
+    if (pts.size === 1) { moved = false; startTarget = e.target.closest("[data-node]"); last = rel(e); start = last; }
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; moved = true; }
+  });
+  svg.addEventListener("pointermove", e => {
+    if (!pts.has(e.pointerId)) return; const p = rel(e); pts.set(e.pointerId, p);
+    if (pts.size === 1 && last) {
+      if (!moved && Math.hypot(p.x - start.x, p.y - start.y) > 7) moved = true;
+      if (moved) { view.x += p.x - last.x; view.y += p.y - last.y; apply(); }
+      last = p; }
+    else if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      view.x += mx - pinch.mx; view.y += my - pinch.my; zoomAt(mx, my, d / pinch.d); pinch = { d, mx, my }; }
+  });
+  const end = e => {
+    if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if (pts.size === 0) { if (!moved && startTarget) { const id = startTarget.getAttribute("data-node"); if (id !== "root") selectNode(id); } pinch = null; last = null; }
+    else if (pts.size === 1) { pinch = null; last = [...pts.values()][0]; moved = true; }
+  };
+  svg.addEventListener("pointerup", end); svg.addEventListener("pointercancel", end);
+  svg.addEventListener("wheel", e => { e.preventDefault(); const p = rel(e); zoomAt(p.x, p.y, e.deltaY < 0 ? 1.12 : 0.89); }, { passive: false });
+}
+function redrawWeb() {
+  const w = $("#webwrap"); if (w) mountWeb(w, active(), {});
+  const r = $("#reviewWeb"); if (r) mountWeb(r, active(), { mini: true });
+}
+
+/* ---------- inspector ---------- */
+function selectNode(id) { App.selected = id; renderInspector(); $("#sheet").classList.add("open"); redrawWeb(); }
+function closeSheet() { $("#sheet").classList.remove("open"); App.selected = null; redrawWeb(); }
+function renderInspector() {
+  const id = App.selected; const n = NODE_BY_ID[id]; if (!n) return;
+  const ch = active(); const D = deriveCharacter(ch); const web = evaluateWeb(ch, D); const r = web[id]; const s = r.state;
+  const isDev = App.filters.showHidden; const cost = nodeCost(n);
+  const stateNames = { owned: "PURCHASED", inactive: "OWNED · INACTIVE", available: "AVAILABLE", locked: "VISIBLE · LOCKED", faded: "FADED · ACCESS LOST", partial: "PARTIALLY REVEALED", hidden: "HIDDEN", absent: "NOT IN THIS WEB" };
+  const stCol = { owned: "var(--good)", inactive: "var(--bad)", available: "var(--accent)", locked: "var(--dim)", faded: "var(--faint)", partial: "var(--faint)", hidden: "var(--faint)", absent: "var(--faint)" }[s];
+  const hyp = isPlanning() && ch.owned[id] && !live().owned[id];
+  const doms = n.domains.map(d => `<span class="chip" style="border-color:${DOMAIN_BY_ID[d].color};color:${DOMAIN_BY_ID[d].color}">${d}</span>`).join("");
+  const nodeFav = ch.favorites.includes("node:" + id), nodePin = ch.pinned.includes("node:" + id);
+  $("#sheetTitle").innerHTML = `<div style="font-weight:700">${s === "partial" && !isDev ? esc(n.name.slice(0, 3)) + "··· <span class='dim small'>(partially revealed)</span>" : esc(n.name)}</div>
+    <div class="tiny mono" style="color:${stCol}">${stateNames[s]}${hyp ? ` · <span class="warn">HYPOTHETICAL</span>` : ""}</div>`;
+  if (s === "partial" && !isDev) {
+    $("#sheetBody").innerHTML = `<div class="row">${doms}</div><p class="dim">Something lies in this direction. Develop the connected nodes to learn more.</p>
+      <div class="dim small">Connected from: ${n.parents.map(p => p === "root" ? "foundation" : (["owned", "available", "locked"].includes((web[p] || {}).state) ? esc(labelFor("node", p)) : "???")).join(" / ")}</div>
+      <div class="card dev" style="margin-top:12px"><div class="devhead">SANDBOX</div><div class="row" style="margin-top:6px">
+      <button class="btn sm" data-act="nodeOv" data-ov="reveal">Force Reveal</button><button class="btn sm danger" data-act="forceBuy">Force Purchase</button></div></div>`;
+    return;
+  }
+  const check = purchaseCheck(ch, id, web, D);
+  const expl = explainNode(ch, id, web, D).map(x => `<h4>${esc(x.title)}</h4><div>${explainHtml(x.res)}</div>`).join("");
+  const g = n.grants || {};
+  const grants = [];
+  for (const a in (g.attrs || {})) grants.push(`${a} ${signed(g.attrs[a])}`);
+  for (const k in (g.skills || {})) grants.push(`${k} ${signed(g.skills[k])}`);
+  if (g.hp) grants.push(`HP +${g.hp}`); if (g.ac) grants.push(`AC +${g.ac}`); if (g.init) grants.push(`Initiative +${g.init}`); if (g.speed) grants.push(`Speed +${g.speed}`);
+  (g.tags || []).forEach(t => grants.push("#" + t));
+  const man = (g.maneuvers || []).map(m => `<div class="small" style="margin:4px 0">◆ <b>${esc(m.name)}</b>${m.masteryReq ? ` <span class="chip">${esc(m.masteryReq.tier)} ${esc(m.masteryReq.skill)}</span>` : ""} — <span class="dim">${esc(m.desc)}</span></div>`).join("");
+  const linkList = ids => ids.map(p => { if (p === "root") return `<span class="chip">Foundation</span>`; const st = web[p].state;
+    const vis = VISIBLE_STATES.has(st) || isDev; return vis ? `<button class="chip" data-act="openNode" data-id="${p}">${esc(labelFor("node", p))} <span class="tiny dim">${st}</span></button>` : `<span class="chip dim">${st === "partial" ? "···" : "hidden"}</span>`; }).join("");
+  const owned = !!ch.owned[id];
+  const deps = owned ? dependentsOf(ch, id) : [];
+  $("#sheetBody").innerHTML = `
+    <div class="row" style="margin-bottom:6px">${doms}<span class="chip">${esc(n.type)}</span><span class="chip mono">cost ${cost}${cost !== n.cost ? ` (base ${n.cost})` : ""}</span><span class="chip test">TEST</span></div>
+    ${n.description ? `<p style="margin:6px 0">${esc(n.description)}</p>` : ""}
+    <div class="muted-box small"><b>Mechanics:</b> ${esc(n.mechanics || "—")}</div>
+    ${grants.length ? `<div class="fx" style="margin-top:6px">${grants.map(x => `<span class="s">${esc(x)}</span>`).join("")}</div>` : ""}
+    ${man ? `<div style="margin-top:8px"><div class="tiny dim">GRANTS MANEUVERS</div>${man}</div>` : ""}
+    ${n.masteryReq ? `<div class="small" style="margin-top:6px">Full effectiveness at <b>${esc(n.masteryReq.tier)} ${esc(n.masteryReq.skill)}</b>; before that: <span class="warn">${esc(CONFIG.underqualifiedPenalty)}</span></div>` : ""}
+    <div class="row" style="margin:12px 0">
+      ${owned ? `<button class="btn warn grow" data-act="refund">Refund / Respec</button>`
+        : `<button class="btn ${check.ok ? "primary" : ""} grow" data-act="buy">${check.ok ? `Purchase — ${cost} WP` : `Purchase anyway…`}</button>`}
+      <button class="star" data-act="nodeStar" title="Favorite">${nodeFav ? "★" : "☆"}</button><button class="star" data-act="nodePin" style="${nodePin ? "" : "opacity:.35"}" title="Pin">📌</button></div>
+    ${!owned && !check.ok ? `<div class="small bad" style="margin-bottom:6px">${check.reasons.map(esc).join("<br>")}</div>` : ""}
+    ${deps.length ? `<div class="small warn">Other owned nodes depend on this: ${deps.map(d => esc(labelFor("node", d))).join(", ")}</div>` : ""}
+    <div class="explain">${expl}</div>
+    <h4 class="dim tiny" style="margin:12px 0 4px;letter-spacing:.08em">CONNECTED FROM</h4><div>${linkList(n.parents)}</div>
+    ${(CHILDREN[id] || []).length ? `<h4 class="dim tiny" style="margin:10px 0 4px;letter-spacing:.08em">LEADS TO</h4><div>${linkList(CHILDREN[id])}</div>` : ""}
+    <div class="card dev" style="margin-top:14px"><div class="devhead">SANDBOX / DM OVERRIDE</div>
+      <div class="row" style="margin-top:8px">${owned ? "" : `<button class="btn sm danger" data-act="forceBuy">Force Purchase</button>`}
+        <button class="btn sm" data-act="nodeOv" data-ov="reveal">Force Reveal</button><button class="btn sm" data-act="nodeOv" data-ov="lock">Force Lock</button>
+        <button class="btn sm" data-act="nodeOv" data-ov="hide">Hide</button>${r.override ? `<button class="btn sm" data-act="nodeOv" data-ov="">Clear override (${r.override})</button>` : ""}</div>
+      <div class="row nowrap" style="margin-top:8px"><span class="small dim">Edit cost</span><input type="number" data-chg="nodeCost" value="${cost}" style="width:80px">
+        <span class="tiny dim">saved to CONFIG.costOverrides; existing purchases keep their paid price</span></div>
+      <details style="margin-top:6px"><summary class="small">Raw node data</summary><textarea readonly style="min-height:120px">${esc(JSON.stringify(n, null, 2))}</textarea></details></div>`;
+}
+/* =====================================================================
+   DEBUGGING / DEVELOPER PANEL + BALANCE STATISTICS (UI)
+   ===================================================================== */
+function renderDev() {
+  const ch = active(); const B = balanceStats(ch); const D = B.D;
+  const cfgNum = (key, label, step) => `<label class="field"><span>${esc(label)}</span><input type="number" step="${step || 1}" data-chg="cfg" data-key="${key}" data-type="num" value="${CONFIG[key]}"></label>`;
+  const bands = CONFIG.webPointBands.map((b, i) => `<tr><td><input type="number" data-chg="band" data-i="${i}" data-f="min" value="${b.min}" style="width:64px"></td>
+    <td><input type="number" data-chg="band" data-i="${i}" data-f="max" value="${b.max}" style="width:64px"></td>
+    <td><input type="number" data-chg="band" data-i="${i}" data-f="perLevel" value="${b.perLevel}" style="width:64px"></td>
+    <td><button class="btn sm danger" data-act="bandDel" data-i="${i}">✕</button></td></tr>`).join("");
+  const tierRows = CONFIG.masteryTiers.map((t, i) => `<tr><td><input type="text" data-chg="tier" data-i="${i}" data-f="name" value="${esc(t.name)}"></td>
+    <td><input type="number" data-chg="tier" data-i="${i}" data-f="min" value="${t.min}" style="width:70px"></td>
+    <td><input type="number" data-chg="pdc" data-tier="${esc(t.name)}" value="${CONFIG.progressDCByTier[t.name] !== undefined ? CONFIG.progressDCByTier[t.name] : ""}" style="width:64px"></td>
+    <td><button class="btn sm danger" data-act="tierDel" data-i="${i}">✕</button></td></tr>`).join("");
+  let proj = ""; for (let L = 1; L <= CONFIG.levelCap; L++) proj += `<tr${L === ch.level ? ` style="background:#0b2233"` : ""}><td class="mono">${L}</td><td class="mono">${L === 1 ? CONFIG.startingWebPoints : "+" + perLevelWP(L)}</td><td class="mono">${wpEarnedAtLevel(L)}</td></tr>`;
+  const maxDom = Math.max(1, ...Object.values(B.byDomain));
+  const nodeOpts = NODES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(n => `<option value="${n.id}" ${App.devNode === n.id ? "selected" : ""}>${esc(n.name)} — ${n.domains.join("/")} (${B.web[n.id].state})</option>`).join("");
+  const dbg = App.dbgNode && NODE_BY_ID[App.dbgNode] ? explainNode(ch, App.dbgNode, B.web, D).map(x => `<h4>${esc(x.title)}</h4>${explainHtml(x.res)}`).join("") +
+    `<details><summary class="small">Condition JSON</summary><textarea readonly>${esc(JSON.stringify({ exists: NODE_BY_ID[App.dbgNode].exists, req: NODE_BY_ID[App.dbgNode].req, op: NODE_BY_ID[App.dbgNode].op, parents: NODE_BY_ID[App.dbgNode].parents, state: B.web[App.dbgNode].state, dist: B.web[App.dbgNode].dist }, null, 2))}</textarea></details>` : "";
+  return `<div class="page">
+    <div class="dangerbox" style="margin-bottom:12px"><div class="devhead">DEVELOPER / SANDBOX</div><div class="small">Overrides everything. Nothing here is protected — break it on purpose. ${isPlanning() ? "<b class='warn'>Currently editing the PLAN.</b>" : "Editing the LIVE character."}</div></div>
+
+    <div class="card dev"><h3>Balance statistics</h3>
+      <div class="kv"><div><div class="k">Level</div><div class="v">${ch.level}</div></div><div><div class="k">WP earned</div><div class="v">${D.wp.earned}</div></div>
+      <div><div class="k">WP spent</div><div class="v">${D.wp.spent}</div></div><div><div class="k">WP banked</div><div class="v ${D.wp.banked < 0 ? "bad" : ""}">${D.wp.banked}</div></div>
+      <div><div class="k">Nodes owned</div><div class="v">${B.nodesOwned}</div></div><div><div class="k">Revealed</div><div class="v">${B.revealed}</div></div>
+      <div><div class="k">Conditional live</div><div class="v">${B.cond}</div></div><div><div class="k">Maneuvers</div><div class="v">${B.maneuvers}</div></div>
+      <div><div class="k">Best skill</div><div class="v" style="font-size:14px">${esc(B.best)} ${signed(D.skills[B.best].total)}</div></div></div>
+      <h4 class="dim tiny" style="margin:12px 0 4px">POINTS SPENT BY DOMAIN (hybrids split)</h4>
+      ${DOMAINS.map(d => `<div class="row nowrap small" style="margin:3px 0"><span style="width:92px" class="mono">${d.id}</span><div class="bar grow"><i style="width:${B.byDomain[d.id] / maxDom * 100}%;background:${d.color}"></i></div><span class="mono" style="width:34px;text-align:right">${+B.byDomain[d.id].toFixed(1)}</span></div>`).join("")}
+      <h4 class="dim tiny" style="margin:12px 0 4px">WEB NODE STATES</h4><div class="fx">${Object.entries(B.counts).map(([k, v]) => `<span>${k}: ${v}</span>`).join("")}</div>
+      <h4 class="dim tiny" style="margin:12px 0 4px">MASTERY DISTRIBUTION</h4><div class="fx">${Object.entries(B.tierCounts).map(([k, v]) => `<span class="tier tier-${k}">${k}: ${v}</span>`).join("")}</div>
+      <details style="margin-top:8px"><summary class="small">Skill values</summary><table class="t"><tr><th>Skill</th><th>Rank</th><th>Mod</th><th>Tier</th><th>Marks</th></tr>
+        ${SKILLS.map(s => `<tr><td>${esc(s.id)}</td><td class="mono">${D.skills[s.id].rank}</td><td class="mono">${signed(D.skills[s.id].total)}</td><td>${D.skills[s.id].tier}</td><td class="mono">${D.skills[s.id].marks}</td></tr>`).join("")}</table></details>
+      <details><summary class="small">Web Point projection, levels 1–${CONFIG.levelCap}</summary><table class="t"><tr><th>Lv</th><th>Gain</th><th>Total</th></tr>${proj}</table></details>
+      <details><summary class="small">Authored content by domain (count · total cost)</summary>
+        ${DOMAINS.map(d => `<div class="small mono">${d.id}: ${+B.authoredByDomain[d.id].count.toFixed(1)} nodes · ${+B.authoredByDomain[d.id].cost.toFixed(1)} WP</div>`).join("")}
+        <div class="small dim">Total authored: ${NODES.length} nodes · ${EVENTS.length} events · ${SKILLS.length} skills · ${SPECIES.length} species</div></details>
+    </div>
+
+    <div class="card dev"><h3>Character overrides</h3>
+      <div class="row"><span class="dim">Level</span><input type="number" id="devLevel" min="1" max="${CONFIG.levelCap}" value="${ch.level}"><button class="btn sm" data-act="devSetLevel">Set</button>
+        <button class="btn sm" data-act="devLevel" data-v="1">1</button><button class="btn sm" data-act="devLevel" data-v="10">10</button><button class="btn sm" data-act="devLevel" data-v="20">20</button><button class="btn sm" data-act="devLevel" data-v="40">40</button></div>
+      <div class="row" style="margin-top:8px"><span class="dim">Bonus WP: <b class="mono">${ch.bonusWP}</b></span><button class="btn sm" data-act="devWP" data-d="10">+10</button><button class="btn sm" data-act="devWP" data-d="100">+100</button>
+        <button class="btn sm" data-act="devWP" data-d="-10">−10</button><button class="btn sm" data-act="devWP" data-d="${-ch.bonusWP}">0</button></div>
+      <h4 class="dim tiny" style="margin:12px 0 4px">ATTRIBUTE OVERRIDES (added on top of lifepath)</h4>
+      ${ATTRS.map(a => `<div class="row nowrap" style="margin:4px 0"><span class="mono" style="width:40px">${a}</span><button class="stepbtn" data-act="devAttr" data-a="${a}" data-d="-1">−</button>
+        <span class="mono" style="width:40px;text-align:center">${signed(ch.overrides.attrs[a] || 0)}</span><button class="stepbtn" data-act="devAttr" data-a="${a}" data-d="1">+</button><span class="dim small">= ${D.attrs[a]}</span></div>`).join("")}
+      <h4 class="dim tiny" style="margin:12px 0 4px">SET SKILL RANK</h4>
+      <div class="row nowrap"><select id="devSkill">${SKILLS.map(s => `<option>${esc(s.id)}</option>`).join("")}</select><input type="number" id="devSkillRank" value="20"><button class="btn sm" data-act="devSetSkill">Set</button></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-act="unlockHistory">Unlock & edit Lifepath history</button></div></div>
+
+    <div class="card dev"><h3>Node tools</h3>
+      <select data-chg="devNode"><option value="">Choose a node…</option>${nodeOpts}</select>
+      <div class="row" style="margin-top:8px"><button class="btn sm" data-act="devNodeAct" data-op="reveal">Force Reveal</button><button class="btn sm" data-act="devNodeAct" data-op="lock">Force Lock</button>
+        <button class="btn sm" data-act="devNodeAct" data-op="hide">Hide</button><button class="btn sm" data-act="devNodeAct" data-op="clear">Clear</button>
+        <button class="btn sm danger" data-act="devNodeAct" data-op="buy">Force Purchase</button><button class="btn sm" data-act="devNodeAct" data-op="remove">Remove</button>
+        <button class="btn sm" data-act="devNodeAct" data-op="inspect">Inspect</button></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-act="devRevealAll">Force-reveal all</button><button class="btn sm" data-act="devClearOv">Clear all overrides</button>
+        <label class="row small"><input type="checkbox" data-chg="showHidden" ${App.filters.showHidden ? "checked" : ""}> Show hidden & absent nodes on Web</label></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm warn" data-act="recalcWeb">Recalculate Web</button><button class="btn sm danger" data-act="resetWeb">Reset Web</button></div>
+      <h4 class="dim tiny" style="margin:12px 0 4px">RESPEC</h4>
+      <div class="row nowrap"><select data-chg="cfg" data-key="respecMode" data-type="str">${["depthLimited", "free", "disabled"].map(m => `<option ${CONFIG.respecMode === m ? "selected" : ""}>${m}</option>`).join("")}</select>
+        <button class="btn sm warn" data-act="respecAll">Respec all</button>${ch.respec.cap ? `<button class="btn sm" data-act="clearRespec">End depth cap</button>` : ""}</div>
+      ${ch.respec.cap ? `<div class="tiny dim" style="margin-top:4px">Depth cap: ${Object.entries(ch.respec.cap).map(([k, v]) => k + " " + v).join(", ") || "none reached"}</div>` : ""}</div>
+
+    <div class="card dev"><h3>Prerequisite debugger</h3>
+      <select data-chg="dbgNode"><option value="">Choose a node…</option>${NODES.map(n => `<option value="${n.id}" ${App.dbgNode === n.id ? "selected" : ""}>${esc(n.name)}</option>`).join("")}</select>
+      <div class="explain" style="margin-top:8px">${dbg}</div></div>
+
+    <div class="card dev"><h3>Configuration — PLAYTEST VALUES</h3>
+      <div class="kv" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+        <div>${cfgNum("startingWebPoints", "Starting WP (level 1)")}</div><div>${cfgNum("levelCap", "Level cap")}</div>
+        <div>${cfgNum("skillSoftCap", "Skill soft cap")}</div><div>${cfgNum("flexibleAttributePoints", "Flexible attr points")}</div>
+        <div>${cfgNum("progressMarksPerIncrease", "Marks per increase")}</div><div>${cfgNum("skillIncreasePerFill", "Skill + per fill")}</div>
+        <div>${cfgNum("maxMarksBetweenLongRests", "Marks / skill / long rest")}</div><div>${cfgNum("fullVisibilityDepth", "Readable fog depth")}</div>
+        <div>${cfgNum("partialVisibilityDepth", "Silhouette fog depth")}</div><div>${cfgNum("hpPerLevel", "HP per level (test)")}</div></div>
+      <label class="row small" style="margin:6px 0"><input type="checkbox" data-chg="cfg" data-key="includeAttributeModInSkill" data-type="bool" ${CONFIG.includeAttributeModInSkill ? "checked" : ""}> Skill modifier includes attribute modifier</label>
+      <label class="row small" style="margin:6px 0"><input type="checkbox" data-chg="cfg" data-key="forcedPurchasesCostPoints" data-type="bool" ${CONFIG.forcedPurchasesCostPoints ? "checked" : ""}> Forced purchases cost Web Points</label>
+      <label class="field"><span>Mastery basis</span><select data-chg="cfg" data-key="masteryBasis" data-type="str"><option ${CONFIG.masteryBasis === "rank" ? "selected" : ""}>rank</option><option ${CONFIG.masteryBasis === "total" ? "selected" : ""}>total</option></select></label>
+      <h4 class="dim tiny" style="margin:10px 0 4px">WEB POINT BANDS</h4>
+      <table class="t"><tr><th>From Lv</th><th>To Lv</th><th>WP/level</th><th></th></tr>${bands}</table><button class="btn sm" data-act="bandAdd" style="margin-top:6px">+ band</button>
+      <h4 class="dim tiny" style="margin:10px 0 4px">MASTERY TIERS (names referenced by nodes) & PROGRESS DC</h4>
+      <table class="t"><tr><th>Name</th><th>Min</th><th>Prog DC</th><th></th></tr>${tierRows}</table><button class="btn sm" data-act="tierAdd" style="margin-top:6px">+ tier</button>
+      <label class="field" style="margin-top:10px"><span>Underqualified maneuver guidance</span><input type="text" data-chg="cfg" data-key="underqualifiedPenalty" data-type="str" value="${esc(CONFIG.underqualifiedPenalty)}"></label>
+      <details><summary class="small">Raw CONFIG JSON</summary><textarea id="cfgJson">${esc(JSON.stringify(CONFIG, null, 2))}</textarea>
+        <div class="row" style="margin-top:6px"><button class="btn sm primary" data-act="cfgApplyJSON">Apply JSON</button><button class="btn sm danger" data-act="cfgReset">Reset to defaults</button></div></details></div>
+
+    <div class="card dev"><h3>Event log (${ch.log.length})</h3>
+      ${ch.log.slice(0, 60).map(l => `<div class="small" style="padding:4px 0;border-top:1px solid var(--line)"><span class="faint mono tiny">${new Date(l.t).toLocaleString()}</span> ${esc(l.msg)}</div>`).join("") || `<div class="dim small">Empty.</div>`}
+      <button class="btn sm" style="margin-top:8px" data-act="clearLog">Clear log</button></div>
+  </div>`;
+}
+
+/* =====================================================================
+   STORAGE — export / import UI
+   ===================================================================== */
+function showJSON(title, filename, obj) {
+  const txt = JSON.stringify(obj, null, 2);
+  App.exportData = { filename, txt };
+  modal(`<h2>${esc(title)}</h2><p class="dim small">Download the file, or copy the JSON somewhere safe (notes app, email to yourself). Paste it back via Import.</p>
+    <div class="row" style="margin-bottom:8px"><button class="btn primary grow" data-act="downloadJSON">Download ${esc(filename)}</button><button class="btn grow" data-act="copyJSON">Copy JSON</button></div>
+    <textarea id="jsonOut" readonly>${esc(txt)}</textarea><button class="btn block" style="margin-top:8px" data-act="closeModal">Done</button>`);
+}
+function importDialog(mode) {
+  App.importMode = mode;
+  modal(`<h2>${mode === "backup" ? "Import Complete Backup" : "Import Character"}</h2>
+    <p class="dim small">${mode === "backup" ? "Restores every character in the backup (existing ones with the same id are replaced) and its configuration." : "Adds the character to your library."} Choose a .json file or paste JSON.</p>
+    <input type="file" accept=".json,application/json,text/plain" id="impFile" style="margin-bottom:8px">
+    <textarea id="impText" placeholder="…or paste JSON here"></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn ghost grow" data-act="closeModal">Cancel</button><button class="btn primary grow" data-act="doImport">Import</button></div>`);
+  $("#impFile").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { $("#impText").value = rd.result; }; rd.readAsText(f); });
+}
+function doImport() {
+  let obj; try { obj = JSON.parse($("#impText").value); } catch (e) { toast("That isn't valid JSON: " + e.message); return; }
+  try {
+    if (App.importMode === "backup") {
+      if (!obj.characters) throw new Error("Not a backup file (no characters).");
+      for (const id in obj.characters) App.store.characters[id] = validateCharacter(obj.characters[id]);
+      if (obj.config) applyConfig(obj.config);
+      saveStore(); closeModal(); toast(`Restored ${Object.keys(obj.characters).length} character(s) and configuration.`); App.screen = "library"; render();
+    } else {
+      const raw = obj.character || obj; if (obj.characters) throw new Error("This is a complete backup — use Import Complete Backup.");
+      const c = validateCharacter(raw);
+      if (App.store.characters[c.id]) { c.id = uid(); c.name = (c.name || "Unnamed") + " (imported)"; }
+      App.store.characters[c.id] = c; saveStore(); closeModal(); toast(`Imported ${c.name || "character"}.`); render();
+    }
+  } catch (e) { toast("Import failed: " + e.message); }
+}
+
+/* =====================================================================
+   UI — ACTIONS (event delegation)
+   ===================================================================== */
+const kindForKey = { events: "event", associations: "assoc", knowledge: "knowledge", equipment: "equip", augmentations: "aug" };
+const draftSetFor = { event: "events", assoc: "assoc", knowledge: "knowledge", equip: "equipment", aug: "aug" };
+function openCharacter(id) {
+  App.liveId = id; App.planning = null; App.view = null; App.selected = null; App.lastInvalid = [];
+  const c = live(); App.screen = c.history.finalized ? "main" : "lifepath"; App.tab = "web";
+  App.lpStage = c.history.finalized ? 0 : Math.max(0, LIFEPATH_STAGES.findIndex(s => s.id !== "final" && !c.history[s.id]));
+  if (App.lpStage < 0) App.lpStage = 0;
+  App.store.settings.lastId = id; saveStore(); $("#sheet").classList.remove("open"); render();
+}
+function doMark(s) { commit(null, ch => { const m = addProgressMark(ch, s); return `Progress Mark: ${s}` + (m.length ? " — " + m.join(" ") : ""); }); }
+function refundWith(id, cascade) {
+  commit(null, ch => {
+    const gone = [];
+    const rm = x => { if (!ch.owned[x]) return; const deps = cascade ? dependentsOf(ch, x) : []; refundNode(ch, x); gone.push(NODE_BY_ID[x].name); deps.forEach(rm); };
+    rm(id); return `Refunded ${gone.join(", ")}`;
+  });
+  closeModal();
+}
+const ACT = {
+  closeModal, confirmOk() { const f = App.pending; closeModal(); if (f) f(); },
+  goLibrary() { if (isPlanning()) toast("Planning discarded."); App.planning = null; if (App.liveId && live() && !isPlanning()) saveStore(); App.screen = "library"; $("#sheet").classList.remove("open"); render(); },
+  saveNow() { const ok = saveStore(); toast(ok ? "Saved to this browser. Export for a portable copy." : "Browser storage unavailable — use Export to keep this character."); },
+  newChar() { const c = newCharacter(); App.store.characters[c.id] = c; saveStore(); openCharacter(c.id); },
+  openChar: d => openCharacter(d.id),
+  dupChar: d => { const c = clone(App.store.characters[d.id]); c.id = uid(); c.name = (c.name || "Unnamed") + " (copy)"; c.updated = Date.now(); App.store.characters[c.id] = c; saveStore(); toast("Duplicated."); render(); },
+  exportChar: d => { const c = App.store.characters[d.id]; showJSON("Export Character", `${(c.name || "character").replace(/[^\w-]+/g, "_")}.buildwright.json`, { buildwright: "character", version: 1, exported: new Date().toISOString(), character: c }); },
+  delChar: d => confirmBox("Delete character?", `<p>Delete <b>${esc(App.store.characters[d.id].name || "Unnamed")}</b> from this browser? Export first if you might want it back.</p>`, "Delete", () => { delete App.store.characters[d.id]; saveStore(); render(); }, "danger"),
+  importChar: () => importDialog("char"), importBackup: () => importDialog("backup"), doImport,
+  exportBackup: () => showJSON("Export Complete Backup", `buildwright-backup-${new Date().toISOString().slice(0, 10)}.json`, { buildwright: "backup", version: 1, exported: new Date().toISOString(), config: CONFIG, characters: App.store.characters }),
+  downloadJSON() {
+    try { const b = new Blob([App.exportData.txt], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = App.exportData.filename;
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); toast("Download started. If nothing happened, use Copy JSON."); }
+    catch (e) { toast("Download blocked here — use Copy JSON."); }
+  },
+  copyJSON() {
+    const ta = $("#jsonOut"); const done = () => toast("Copied to clipboard.");
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(App.exportData.txt).then(done, () => { ta.select(); try { document.execCommand("copy"); done(); } catch (e) { toast("Select the text and copy it manually."); } });
+    else { ta.focus(); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { toast("Select the text and copy it manually."); } }
+  },
+  resetPrototype: () => confirmBox("Reset prototype?", `<p>This erases <b>every character</b> and all configuration stored in this browser. Export a backup first.</p>`, "Erase everything", () => {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    App.store = { version: 1, config: null, characters: {}, settings: {} }; Storage_.mem = null; applyConfig(null); saveStore(); App.liveId = null; App.screen = "library"; render(); toast("Prototype reset.");
+  }, "danger"),
+
+  // lifepath
+  lpGo: d => { App.lpStage = +d.i; App.lastInvalid = []; render(); $("#view").scrollTop = 0; },
+  lpPick: d => { const ch = active(); App.lastInvalid = setLifepathChoice(ch, d.stage, d.id); ch.updated = Date.now(); saveStore(); render(); },
+  lpNA: () => toast("Unavailable with your current history — the requirements are listed on the card."),
+  lpBack: () => { App.lpStage = Math.max(0, App.lpStage - 1); App.lastInvalid = []; render(); $("#view").scrollTop = 0; },
+  lpNext: () => { const st = LIFEPATH_STAGES[App.lpStage]; if (!active().history[st.id]) toast("No choice yet for " + st.name + " — you can come back."); App.lpStage = Math.min(LIFEPATH_STAGES.length - 1, App.lpStage + 1); App.lastInvalid = []; render(); $("#view").scrollTop = 0; },
+  lpFlex: d => { const ch = active(); ch.history.flex[d.a] = (ch.history.flex[d.a] || 0) + Number(d.d); saveStore(); render(); },
+  lpReview: () => { App.screen = "review"; render(); $("#view").scrollTop = 0; },
+  reviewBack: () => { App.screen = "lifepath"; render(); },
+  createChar: () => confirmBox(active().history.finalized ? "Re-finalize history?" : "Create character?", `<p>Foundational history becomes read-only in normal mode. (Developer override can still unlock it.)</p>`, "CREATE CHARACTER", () => {
+    const ch = active(); const first = !ch.history.everFinalized;
+    ch.history.finalized = true; ch.history.everFinalized = true;
+    if (first) { ch.level = Math.max(1, Math.min(CONFIG.levelCap, Number(ch.history.startingLevel) || 1)); ch.owned = {}; }
+    markSeenNow(ch); logChar(ch, first ? `Character created at level ${ch.level} with ${webPoints(ch).earned} Web Points.` : "Lifepath history edited and re-finalized (override).");
+    saveStore(); App.screen = "main"; App.tab = "web"; App.view = null; render(); toast(first ? "Character created. Tap a glowing node to spend Web Points." : "History re-finalized.");
+  }, "primary"),
+
+  // main navigation
+  tab: d => { App.tab = d.tab; if (d.tab !== "web") { $("#sheet").classList.remove("open"); App.selected = null; } render(); },
+  closeSheet, openNode: d => { App.tab = "web"; App.selected = d.id; render(); selectNode(d.id); },
+  zoom: d => { const w = $("#webwrap"); if (w && w._zoom) w._zoom(Number(d.f)); },
+  fit: () => { const w = $("#webwrap"); if (w && w._fit) w._fit(); },
+  legend: () => { App.filters.legend = !App.filters.legend; render(); },
+
+  // sheet
+  level: d => { const ch = active(); const to = Math.max(1, Math.min(CONFIG.levelCap, ch.level + Number(d.d))); if (to === ch.level) return toast("Level cap is " + CONFIG.levelCap + "."); const gain = to > ch.level ? perLevelWP(to) : -perLevelWP(ch.level);
+    commit(null, c => { c.level = to; return `Level ${to} (${signed(gain)} WP)`; }); },
+  manFav: () => { App.man.favOnly = !App.man.favOnly; render(); },
+  manStar: d => { const ch = active(); const i = ch.favorites.indexOf(d.k); i >= 0 ? ch.favorites.splice(i, 1) : ch.favorites.push(d.k); if (!isPlanning()) saveStore(); render(); },
+  manPin: d => { const ch = active(); const i = ch.pinned.indexOf(d.k); i >= 0 ? ch.pinned.splice(i, 1) : ch.pinned.push(d.k); if (!isPlanning()) saveStore(); render(); },
+
+  // skills
+  mark: d => {
+    const s = d.s; const ch = active();
+    if (Number(d.d) < 0) return commit(`Removed Progress Mark: ${s}`, c => removeProgressMark(c, s), { quiet: true });
+    const D = deriveCharacter(ch); const warn = [];
+    if (D.skills[s].markedSinceRest && CONFIG.maxMarksBetweenLongRests <= 1) warn.push(`${esc(s)} already earned a Progress Mark since the last long rest (limit ${CONFIG.maxMarksBetweenLongRests}).`);
+    if (!D.skills[s].unlock.ok) warn.push(`${esc(s)} is not unlocked yet (${esc(SKILL_BY_ID[s].note || "")}).`);
+    if (warn.length) return confirmBox("Add Progress Mark anyway?", `<p>${warn.join("<br>")}</p><p class="dim small">Buildwright warns but doesn't police the table.</p>`, "Add anyway", () => doMark(s), "warn");
+    doMark(s);
+  },
+  rank: d => commit(`${d.s} rank ${signed(Number(d.d))} (manual)`, c => changeRank(c, d.s, Number(d.d))),
+  skillTrained: () => { App.skillTrained = !App.skillTrained; render(); },
+  longRest: () => commit("Long rest — Progress Mark eligibility reset", c => longRest(c)),
+
+  // state
+  stAdd: d => { const v = $("#add_" + d.key).value; if (!v) return toast("Choose something to add first."); const kind = kindForKey[d.key];
+    commit(null, c => { const key = kind + ":" + v; if (c.state.removed.includes(key)) c.state.removed = c.state.removed.filter(x => x !== key); else c.state[d.key].push(v);
+      return `${kind === "event" ? "Event" : "Added"}: ${(EVENT_BY_ID[v] || ACCESS_BY_ID[v]).name}`; }); },
+  stRemove: d => commit(null, c => { const lp = buildLifepath(c.history).draft; c.state[d.key] = c.state[d.key].filter(x => x !== d.id);
+    if (lp[draftSetFor[d.kind]].has(d.id)) c.state.removed.push(d.kind + ":" + d.id); return `Removed: ${(EVENT_BY_ID[d.id] || ACCESS_BY_ID[d.id] || { name: d.id }).name}`; }),
+  stRestore: d => commit(null, c => { c.state.removed = c.state.removed.filter(x => x !== d.kind + ":" + d.id); return `Restored: ${(EVENT_BY_ID[d.id] || ACCESS_BY_ID[d.id] || { name: d.id }).name}`; }),
+  tagAdd: () => { const v = ($("#tagInput").value || "").trim().replace(/\s+/g, "_"); if (!v) return; commit(`Tag added: #${v}`, c => { if (!c.state.tags.includes(v)) c.state.tags.push(v); }); },
+  tagRemove: d => commit(`Tag removed: #${d.t}`, c => { c.state.tags = c.state.tags.filter(x => x !== d.t); }),
+
+  // inspector
+  buy: () => { const id = App.selected; const ch = active(); const D = deriveCharacter(ch); const chk = purchaseCheck(ch, id, evaluateWeb(ch, D), D);
+    if (chk.ok) commit(null, c => purchaseNode(c, id));
+    else confirmBox("Purchase anyway?", `<p>${chk.reasons.map(esc).join("<br>")}</p><p class="dim small">This records a forced (override) purchase. Banked points may go negative.</p>`, "Purchase anyway", () => commit(null, c => purchaseNode(c, id, true)), "danger"); },
+  forceBuy: () => commit(null, c => purchaseNode(c, App.selected, true)),
+  refund: () => { const id = App.selected; const ch = active(); const deps = dependentsOf(ch, id);
+    const rule = CONFIG.respecMode === "disabled" ? `<p class="warn">Respec is disabled at this table (CONFIG.respecMode). Refunding anyway is a DM override.</p>` : "";
+    App.refundId = id;
+    modal(`<h2>Refund ${esc(NODE_BY_ID[id].name)}?</h2>${rule}<p>Returns ${ch.owned[id].cost} WP.</p>
+      ${deps.length ? `<p class="warn">Depends on it: ${deps.map(x => esc(labelFor("node", x))).join(", ")}. Refunding only this leaves them orphaned (still owned).</p>` : ""}
+      <div class="row"><button class="btn ghost grow" data-act="closeModal">Cancel</button><button class="btn warn grow" data-act="refundDo" data-c="0">Refund this only</button>
+      ${deps.length ? `<button class="btn danger grow" data-act="refundDo" data-c="1">Refund with dependents</button>` : ""}</div>`); },
+  refundDo: d => refundWith(App.refundId, d.c === "1"),
+  nodeStar: () => { const ch = active(); const k = "node:" + App.selected; const i = ch.favorites.indexOf(k); i >= 0 ? ch.favorites.splice(i, 1) : ch.favorites.push(k); if (!isPlanning()) saveStore(); renderInspector(); },
+  nodePin: () => { const ch = active(); const k = "node:" + App.selected; const i = ch.pinned.indexOf(k); i >= 0 ? ch.pinned.splice(i, 1) : ch.pinned.push(k); if (!isPlanning()) saveStore(); renderInspector(); },
+  nodeOv: d => commit(`Override: ${labelFor("node", App.selected)} → ${d.ov || "cleared"}`, c => { if (d.ov) c.overrides.nodes[App.selected] = d.ov; else delete c.overrides.nodes[App.selected]; }),
+
+  // planning
+  planEnter: () => { App.planning = clone(live()); App.tab = "plan"; toast("Planning Mode — a hypothetical copy. Your live character is untouched."); render(); },
+  planReset: () => { App.planning = clone(live()); toast("Plan reset to live character."); render(); },
+  planExit: () => { App.planning = null; toast("Back to your LIVE character."); render(); },
+  planApply: () => confirmBox("Apply plan to live character?", `<p>This <b>replaces</b> the live character with the planning copy (purchases, level, events, skills). Only do this if the DM agrees.</p>`, "Apply to live", () => {
+    const p = clone(App.planning); p.id = App.liveId; logChar(p, "Applied planning changes to live character."); App.store.characters[App.liveId] = p; App.planning = null; saveStore(); toast("Plan applied."); render(); }, "danger"),
+  planWP: d => commit(`[Plan] bonus WP ${signed(Number(d.d))}`, c => { c.bonusWP = Number(c.bonusWP) + Number(d.d); }, { quiet: true }),
+
+  // dev
+  devSetLevel: () => ACT.devLevel({ v: $("#devLevel").value }),
+  devLevel: d => { const v = Math.max(1, Math.min(CONFIG.levelCap, Number(d.v) || 1)); commit(`Level set to ${v} (override)`, c => { c.level = v; }); },
+  devWP: d => commit(`Bonus Web Points ${signed(Number(d.d))} (override)`, c => { c.bonusWP = Number(c.bonusWP || 0) + Number(d.d); }),
+  devAttr: d => commit(`${d.a} override ${signed(Number(d.d))}`, c => { c.overrides.attrs[d.a] = (c.overrides.attrs[d.a] || 0) + Number(d.d); }),
+  devSetSkill: () => { const s = $("#devSkill").value, v = Number($("#devSkillRank").value); commit(`${s} rank set to ${v} (override)`, c => { const lpR = buildLifepath(c.history).draft.skills[s] || 0; skillState(c, s).gained = v - lpR; }); },
+  devNodeAct: d => { const id = App.devNode; if (!id) return toast("Choose a node first.");
+    if (d.op === "inspect") return ACT.openNode({ id });
+    if (d.op === "buy") return commit(null, c => purchaseNode(c, id, true));
+    if (d.op === "remove") return commit(null, c => refundNode(c, id));
+    commit(`Override: ${labelFor("node", id)} → ${d.op === "clear" ? "cleared" : d.op}`, c => { if (d.op === "clear") delete c.overrides.nodes[id]; else c.overrides.nodes[id] = d.op; }); },
+  devRevealAll: () => commit("Force-revealed all nodes", c => NODES.forEach(n => c.overrides.nodes[n.id] = "reveal")),
+  devClearOv: () => commit("Cleared all node overrides", c => { c.overrides.nodes = {}; }),
+  recalcWeb: () => commit("Recalculated Web", () => {}),
+  resetWeb: () => confirmBox("Reset Web?", "<p>Removes every purchased node, seen-history and override. Skills, events and history stay.</p>", "Reset Web", () => commit("Web reset", c => { c.owned = {}; c.seen = []; c.overrides.nodes = {}; c.respec.cap = null; }), "danger"),
+  respecAll: () => confirmBox("Respec all nodes?", `<p>Refunds every node. Mode <b>${esc(CONFIG.respecMode)}</b>${CONFIG.respecMode === "depthLimited" ? ": you can't rebuy deeper into a domain than you had reached (override still possible)" : ""}.</p>`, "Respec", () => commit(null, c => respecAll(c)), "warn"),
+  clearRespec: () => commit("Respec depth cap cleared", c => { c.respec.cap = null; }),
+  unlockHistory: () => confirmBox("Unlock Lifepath history?", "<p>DM/developer override. Edits rebuild attributes, lifepath skills and lifepath access. Purchased nodes and play progress stay.</p>", "Unlock", () => { if (isPlanning()) App.planning = null; App.screen = "lifepath"; App.lpStage = 0; render(); }, "danger"),
+  bandAdd: () => { const b = CONFIG.webPointBands; const l = b[b.length - 1] || { max: 0, perLevel: 5 }; b.push({ min: l.max + 1, max: l.max + 5, perLevel: l.perLevel }); saveStore(); render(); },
+  bandDel: d => { CONFIG.webPointBands.splice(+d.i, 1); saveStore(); render(); },
+  tierAdd: () => { const t = CONFIG.masteryTiers; const l = t[t.length - 1]; t.push({ name: "Tier" + (t.length + 1), min: l.min + 10 }); saveStore(); render(); },
+  tierDel: d => { CONFIG.masteryTiers.splice(+d.i, 1); saveStore(); render(); },
+  cfgApplyJSON: () => { try { applyConfig(JSON.parse($("#cfgJson").value)); saveStore(); toast("Configuration applied."); render(); } catch (e) { toast("Invalid JSON: " + e.message); } },
+  cfgReset: () => confirmBox("Reset configuration?", "<p>Restores every PLAYTEST VALUE (bands, tiers, node price edits…) to the file's defaults.</p>", "Reset", () => { applyConfig(null); saveStore(); render(); toast("Configuration reset."); }, "danger"),
+  clearLog: () => { active().log = []; if (!isPlanning()) saveStore(); render(); }
+};
+const CHG = {
+  lpName: v => { active().name = v; saveStore(); renderTop(); },
+  lpAge: v => { active().history.age = v; saveStore(); },
+  lpLevel: v => { active().history.startingLevel = Math.max(1, Math.min(CONFIG.levelCap, Number(v) || 1)); saveStore(); render(); },
+  charName: v => { active().name = v; if (!isPlanning()) saveStore(); renderTop(); },
+  webDom: v => { App.filters.domain = v; redrawWeb(); },
+  showHidden: (v, d, el) => { App.filters.showHidden = el.checked; render(); },
+  manDom: v => { App.man.domain = v; render(); }, manKind: v => { App.man.kind = v; render(); },
+  nodeCost: v => { const n = NODE_BY_ID[App.selected]; if (Number(v) === n.cost) delete CONFIG.costOverrides[n.id]; else CONFIG.costOverrides[n.id] = Number(v); saveStore(); toast(`${n.name} now costs ${nodeCost(n)} (config).`); render(); },
+  planLevel: v => commit(`[Plan] level → ${v}`, c => { c.level = Number(v); }, { quiet: true }),
+  devNode: v => { App.devNode = v; }, dbgNode: v => { App.dbgNode = v; render(); },
+  cfg: (v, d, el) => { CONFIG[d.key] = d.type === "num" ? Number(v) : d.type === "bool" ? el.checked : v; applyConfig(CONFIG); saveStore(); render(); toast(`${d.key} = ${JSON.stringify(CONFIG[d.key])}`); },
+  band: (v, d) => { CONFIG.webPointBands[+d.i][d.f] = Number(v); saveStore(); render(); },
+  tier: (v, d) => { const t = CONFIG.masteryTiers[+d.i]; if (d.f === "name") { const old = t.name; t.name = v; if (CONFIG.progressDCByTier[old] !== undefined) { CONFIG.progressDCByTier[v] = CONFIG.progressDCByTier[old]; delete CONFIG.progressDCByTier[old]; } } else t.min = Number(v); saveStore(); render(); },
+  pdc: (v, d) => { CONFIG.progressDCByTier[d.tier] = Number(v); saveStore(); render(); }
+};
+const INP = {
+  webQ: v => { App.filters.search = v; redrawWeb(); },
+  skillQ: v => { App.skillQ = v; const ch = active(); $("#skillList").innerHTML = skillListHtml(ch, deriveCharacter(ch)); },
+  manQ: v => { App.man.q = v; const ch = active(); $("#manList").innerHTML = manListHtml(ch, deriveCharacter(ch)); }
+};
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+function boot() {
+  App.store = Storage_.load();
+  App.store.characters = App.store.characters || {}; App.store.settings = App.store.settings || {};
+  for (const id in App.store.characters) { try { App.store.characters[id] = validateCharacter(App.store.characters[id]); } catch (e) { delete App.store.characters[id]; } }
+  applyConfig(App.store.config);
+  document.addEventListener("click", e => {
+    if (e.target.id === "modal") return closeModal();
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const fn = ACT[el.dataset.act]; if (!fn) return;
+    e.preventDefault(); try { fn(el.dataset, el, e); } catch (err) { console.error(err); toast("Error: " + err.message); }
+  });
+  document.addEventListener("change", e => { const el = e.target.closest("[data-chg]"); if (!el) return; const fn = CHG[el.dataset.chg];
+    if (fn) { try { fn(el.value, el.dataset, el); } catch (err) { console.error(err); toast("Error: " + err.message); } } });
+  document.addEventListener("input", e => { const el = e.target.closest("[data-inp]"); if (!el) return; const fn = INP[el.dataset.inp]; if (fn) fn(el.value, el.dataset, el); });
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (App.screen === "main" && App.tab === "web") redrawWeb(); }, 150); });
+  window.addEventListener("error", e => toast("Error: " + e.message));
+  render();
+}
+boot();
+</script>
+</body>
+</html>
